@@ -5,7 +5,16 @@
       "firebase.json",
       ".firebaserc",
       "**/.*",
-      "**/node_modules/**"
+      "**/.git/**",
+      "**/node_modules/**",
+      "server.js",
+      "package.json",
+      "package-lock.json",
+      "*.bat",
+      "*.cmd",
+      "*.sh",
+      "*.exe",
+      "*.md"
     ],
     "rewrites": [
       {

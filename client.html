@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>마음 돋보기 - 내담자용</title>
   <script>
-    // app.html과 동일한 내담자용 앱으로 즉시 연결하거나 내용 공유
-    window.location.replace("app.html");
+    // app.html과 동일한 내담자용 앱으로 즉시 연결 (초대 설정 및 파라미터 보존)
+    window.location.replace("app.html" + window.location.search + window.location.hash);
   </script>
 </head>
 <body>

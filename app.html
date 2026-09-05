@@ -13,6 +13,12 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <!-- D3.js v7 -->
   <script src="https://d3js.org/d3.v7.min.js"></script>
+  <!-- Firebase SDK (v10.8.0 Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <!-- Mind Lens Cloud DB Config & Adapter -->
+  <script src="firebase-config.js"></script>
+  <script src="mind-db.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&display=swap');
     body {
@@ -108,84 +114,7 @@
       }
     ];
 
-    // ==========================================
-    // IndexedDB 브라우저 영구 저장소
-    // ==========================================
-    const DB_NAME = 'MindLensDB';
-    const DB_VERSION = 1;
-    const STORE_NAME = 'surveys';
-
-    const MindDB = {
-      open: () => {
-        return new Promise((resolve) => {
-          if (!window.indexedDB) {
-            resolve(null);
-            return;
-          }
-          const req = indexedDB.open(DB_NAME, DB_VERSION);
-          req.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-              const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-              store.createIndex('nickname', 'nickname', { unique: false });
-              store.createIndex('createdAt', 'createdAt', { unique: false });
-            }
-          };
-          req.onsuccess = () => resolve(req.result);
-          req.onerror = () => resolve(null);
-        });
-      },
-
-      getAll: async () => {
-        const db = await MindDB.open();
-        if (!db) {
-          try {
-            const backup = localStorage.getItem('mind_surveys_backup');
-            return backup ? JSON.parse(backup) : null;
-          } catch (e) { return null; }
-        }
-        return new Promise((resolve) => {
-          try {
-            const tx = db.transaction(STORE_NAME, 'readonly');
-            const store = tx.objectStore(STORE_NAME);
-            const req = store.getAll();
-            req.onsuccess = () => {
-              const res = req.result;
-              if (res && res.length > 0) {
-                resolve(res.sort((a, b) => b.id - a.id));
-              } else {
-                try {
-                  const backup = localStorage.getItem('mind_surveys_backup');
-                  resolve(backup ? JSON.parse(backup) : null);
-                } catch (e) { resolve(null); }
-              }
-            };
-            req.onerror = () => resolve(null);
-          } catch (e) { resolve(null); }
-        });
-      },
-
-      save: async (record) => {
-        // localStorage 백업
-        try {
-          const existingStr = localStorage.getItem('mind_surveys_backup');
-          const list = existingStr ? JSON.parse(existingStr) : [];
-          const filtered = list.filter(item => item.id !== record.id);
-          filtered.unshift(record);
-          localStorage.setItem('mind_surveys_backup', JSON.stringify(filtered));
-        } catch (e) {}
-
-        // IndexedDB 저장
-        const db = await MindDB.open();
-        if (db) {
-          try {
-            const tx = db.transaction(STORE_NAME, 'readwrite');
-            const store = tx.objectStore(STORE_NAME);
-            store.put(record);
-          } catch (e) {}
-        }
-      }
-    };
+    // mind-db.js 모듈에서 제공하는 전역 MindDB (Firebase Firestore + Local Fallback)를 사용합니다.
 
     // ==========================================
     // 메인 App 컴포넌트 (내담자 전용)
@@ -202,15 +131,31 @@
       const [showNicknameModal, setShowNicknameModal] = useState(() => !localStorage.getItem('mind_user_nickname'));
       const [inputNick, setInputNick] = useState('');
 
+      // 클라우드 DB 상태 및 설정 모달
+      const [dbStatus, setDbStatus] = useState(() => MindDB.getStatus());
+      const [showDbModal, setShowDbModal] = useState(false);
+      const [configInput, setConfigInput] = useState('');
+
+      // 실시간 데이터 구독 (Firestore 연동 시 내담자 본인의 기록 실시간 동기화)
       useEffect(() => {
-        MindDB.getAll().then((saved) => {
+        const unsubscribe = MindDB.subscribe((saved) => {
           if (saved && saved.length > 0) {
-            setChains(saved);
+            // 현재 로그인된 닉네임의 기록만 필터링 (개인정보 격리)
+            const myChains = nickname ? saved.filter(item => item.nickname === nickname) : saved;
+            setChains(myChains.length > 0 ? myChains : INITIAL_CHAINS);
           } else {
-            INITIAL_CHAINS.forEach(item => MindDB.save(item));
+            setChains(INITIAL_CHAINS);
           }
-        });
-      }, []);
+          setDbStatus(MindDB.getStatus());
+        }, (err) => {
+          console.warn("DB 실시간 구독 에러:", err);
+          setDbStatus(MindDB.getStatus());
+        }, nickname || null);
+
+        return () => {
+          if (typeof unsubscribe === 'function') unsubscribe();
+        };
+      }, [nickname]);
 
       const handleSaveNickname = (name) => {
         const trimmed = (name || inputNick).trim();
@@ -246,7 +191,7 @@
         }
       };
 
-      // 8단계 설문 저장 핸들러 (정확한 일시 포맷 기록)
+      // 8단계 설문 저장 핸들러 (정확한 일시 포맷 기록 및 클라우드 영구 저장)
       const saveChain = async () => {
         const types = ['컨디션', '계기', '생각', '감정', '몸느낌', '행동', '결과', '긍정대처'];
         const newSeq = types.map((typeName, idx) => ({
@@ -266,14 +211,47 @@
           sequence: newSeq
         };
 
-        await MindDB.save(newEntry);
-        setChains([newEntry, ...chains]);
+        const result = await MindDB.save(newEntry);
+        setChains(prev => [newEntry, ...prev.filter(item => item.id !== newEntry.id)]);
 
-        alert(`참 잘하셨습니다, ${nickname || '선생'}님! 🌻\n소중한 마음 기록과 긍정 대처가 저장되었습니다.\n내 마음 행동 지도로 안내해 드립니다.`);
+        const syncNotice = result.mode === 'firestore'
+          ? "☁️ 상담자 연구실로 실시간 안전하게 전송되었습니다."
+          : "💾 내 브라우저에 안전하게 보관되었습니다.";
+
+        alert(`참 잘하셨습니다, ${nickname || '선생'}님! 🌻\n소중한 마음 기록과 긍정 대처가 저장되었습니다.\n(${syncNotice})\n내 마음 행동 지도로 안내해 드립니다.`);
         setCurrentStep(1);
         setSelectedAnswers({});
         setCustomInput('');
         setTab('network');
+      };
+
+      // Firebase 설정 저장/초기화 핸들러
+      const handleSaveConfig = () => {
+        try {
+          const parsed = JSON.parse(configInput);
+          if (!parsed.apiKey || !parsed.projectId) {
+            alert("apiKey와 projectId는 필수 항목입니다.");
+            return;
+          }
+          const res = MindDB.saveConfig(parsed);
+          if (res.success) {
+            alert("Firebase 클라우드 DB가 성공적으로 연결되었습니다!");
+            setShowDbModal(false);
+            setDbStatus(MindDB.getStatus());
+          } else {
+            alert("Firebase 연결 실패: " + (res.error || '설정값을 확인하세요.'));
+          }
+        } catch (e) {
+          alert("JSON 형식이 올바르지 않습니다.");
+        }
+      };
+
+      const handleResetConfig = () => {
+        if (confirm("Firebase 설정을 제거하고 로컬 브라우저 모드로 전환하시겠습니까?")) {
+          MindDB.resetConfig();
+          setDbStatus(MindDB.getStatus());
+          setShowDbModal(false);
+        }
       };
 
       return (
@@ -289,8 +267,25 @@
                 </div>
               </div>
 
-              {/* 닉네임 & 관리자 링크 */}
-              <div className="flex flex-col items-end gap-1.5">
+              {/* 닉네임 & 클라우드 상태 */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    const currentCfg = MindDB.getConfig();
+                    setConfigInput(currentCfg ? JSON.stringify(currentCfg, null, 2) : '');
+                    setShowDbModal(true);
+                  }}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold flex items-center gap-1 shadow-sm touch-btn border ${
+                    dbStatus.isCloud
+                      ? 'bg-emerald-100 border-emerald-300 text-emerald-800'
+                      : 'bg-amber-200/80 border-amber-300 text-amber-800'
+                  }`}
+                  title="클라우드 DB 실시간 연결 상태"
+                >
+                  <span>{dbStatus.isCloud ? '🟢' : '🟡'}</span>
+                  <span>{dbStatus.isCloud ? '실시간 동기화' : '로컬 모드'}</span>
+                </button>
+
                 <button
                   onClick={() => { setInputNick(nickname); setShowNicknameModal(true); }}
                   className="px-3 py-1 bg-amber-200 hover:bg-amber-300 text-amber-950 rounded-full text-xs font-extrabold flex items-center gap-1 shadow-sm touch-btn"
@@ -300,15 +295,6 @@
                   <span>{nickname ? `${nickname}님` : '닉네임 등록'}</span>
                   <span className="text-[10px] text-amber-700">✏️</span>
                 </button>
-
-                <a
-                  href="admin.html"
-                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 text-slate-100 rounded-full text-[11px] font-bold flex items-center gap-1 shadow-sm touch-btn"
-                  title="연구자/상담사용 관리자 콘솔로 이동"
-                >
-                  <span>🎓</span>
-                  <span>관리자 콘솔 ➔</span>
-                </a>
               </div>
             </div>
 
@@ -500,6 +486,87 @@
                   >
                     마음 돋보기 시작하기 🚀
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Firebase 클라우드 영구 DB 설정 모달 */}
+          {showDbModal && (
+            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+              <div className="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl border-4 border-indigo-400 space-y-4">
+                <div className="flex items-center justify-between border-b pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">☁️</span>
+                    <div>
+                      <h3 className="text-lg font-black text-slate-900">클라우드 영구 DB 동기화 설정</h3>
+                      <p className="text-xs text-slate-500">스마트폰이나 다른 기기에서도 내 기록과 연결됩니다</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowDbModal(false)}
+                    className="text-slate-400 hover:text-slate-700 text-xl font-bold p-1"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* 현재 상태 */}
+                <div className={`p-3 rounded-2xl border text-xs flex items-center gap-2.5 ${
+                  dbStatus.isCloud
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                    : 'bg-amber-50 border-amber-300 text-amber-900'
+                }`}>
+                  <span className="text-xl">{dbStatus.isCloud ? '🟢' : '🟡'}</span>
+                  <div>
+                    <strong className="block font-bold">{dbStatus.label}</strong>
+                    <span className="text-[11px] opacity-80">
+                      {dbStatus.isCloud
+                        ? '제출하신 설문이 연구자·상담자에게 실시간으로 안전하게 전송됩니다.'
+                        : '현재 브라우저에만 저장되고 있습니다. 원격 연동을 위해 Firebase 설정을 입력하세요.'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 설정 입력창 */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-bold text-slate-700">Firebase Config (JSON 붙여넣기)</label>
+                    <span className="text-[11px] text-indigo-600 font-semibold">관리자/상담자에게 받은 키 입력</span>
+                  </div>
+                  <textarea
+                    rows={5}
+                    value={configInput}
+                    onChange={(e) => setConfigInput(e.target.value)}
+                    placeholder={`{\n  "apiKey": "...",\n  "projectId": "..."\n}`}
+                    className="w-full border-2 border-slate-300 rounded-2xl p-3 text-xs font-mono text-slate-800 focus:outline-none focus:border-indigo-500"
+                  />
+                  <p className="text-[11px] text-slate-500">
+                    💡 상담자로부터 전달받은 Firebase 설정 JSON을 붙여넣으시면 즉시 연결됩니다.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <button
+                    onClick={handleResetConfig}
+                    className="text-xs text-rose-600 hover:underline font-bold"
+                  >
+                    설정 초기화 (로컬 모드)
+                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowDbModal(false)}
+                      className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold"
+                    >
+                      닫기
+                    </button>
+                    <button
+                      onClick={handleSaveConfig}
+                      className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow touch-btn"
+                    >
+                      저장 및 동기화 ➔
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

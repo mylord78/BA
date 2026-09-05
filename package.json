@@ -1,0 +1,18 @@
+{
+  "name": "mind-lens-ba",
+  "version": "2.0.0",
+  "description": "마음 돋보기 (Mind Lens) - 행동 활성화(BA) & 동적 네트워크 임상 시스템",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "deploy:firebase": "firebase deploy --only hosting"
+  },
+  "keywords": [
+    "behavioral-activation",
+    "mental-health",
+    "clinical-psychometrics",
+    "firebase"
+  ],
+  "author": "",
+  "license": "MIT"
+}

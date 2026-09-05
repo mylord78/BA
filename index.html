@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>마음 돋보기 (Mind Lens)</title>
+  <script>
+    // 기본 루트 접속 시 내담자용 앱(app.html)으로 파라미터 및 해시를 유지하여 즉시 이동
+    window.location.replace("app.html" + window.location.search + window.location.hash);
+  </script>
+</head>
+<body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #FEFDF9; color: #78350F;">
+  <div style="text-align: center;">
+    <h2 style="font-size: 24px; margin-bottom: 8px;">🌻 마음 돋보기로 이동 중입니다...</h2>
+    <p style="font-size: 14px; color: #92400E;">화면이 자동으로 넘어가지 않으면 <a href="app.html" style="color: #D97706; font-weight: bold;">여기를 클릭하세요</a>.</p>
+  </div>
+</body>
+</html>

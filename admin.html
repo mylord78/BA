@@ -13,6 +13,12 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <!-- D3.js v7 -->
   <script src="https://d3js.org/d3.v7.min.js"></script>
+  <!-- Firebase SDK (v10.8.0 Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <!-- Mind Lens Cloud DB Config & Adapter -->
+  <script src="firebase-config.js"></script>
+  <script src="mind-db.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&display=swap');
     body {
@@ -34,137 +40,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef, useMemo } = React;
 
-    // ==========================================
-    // 0. IndexedDB 영구 DB 모듈
-    // ==========================================
-    const DB_NAME = 'MindLensDB';
-    const DB_VERSION = 1;
-    const STORE_NAME = 'surveys';
-
-    const MindDB = {
-      open: () => {
-        return new Promise((resolve) => {
-          if (!window.indexedDB) {
-            resolve(null);
-            return;
-          }
-          const req = indexedDB.open(DB_NAME, DB_VERSION);
-          req.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-              const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-              store.createIndex('nickname', 'nickname', { unique: false });
-              store.createIndex('createdAt', 'createdAt', { unique: false });
-            }
-          };
-          req.onsuccess = () => resolve(req.result);
-          req.onerror = () => resolve(null);
-        });
-      },
-
-      getAll: async () => {
-        const db = await MindDB.open();
-        if (!db) {
-          try {
-            const backup = localStorage.getItem('mind_surveys_backup');
-            return backup ? JSON.parse(backup) : [];
-          } catch (e) { return []; }
-        }
-        return new Promise((resolve) => {
-          try {
-            const tx = db.transaction(STORE_NAME, 'readonly');
-            const store = tx.objectStore(STORE_NAME);
-            const req = store.getAll();
-            req.onsuccess = () => {
-              const res = req.result || [];
-              if (res.length > 0) {
-                resolve(res.sort((a, b) => b.id - a.id));
-              } else {
-                try {
-                  const backup = localStorage.getItem('mind_surveys_backup');
-                  resolve(backup ? JSON.parse(backup) : []);
-                } catch(e) { resolve([]); }
-              }
-            };
-            req.onerror = () => resolve([]);
-          } catch (e) { resolve([]); }
-        });
-      },
-
-      deleteRecord: async (id) => {
-        try {
-          const existingStr = localStorage.getItem('mind_surveys_backup');
-          if (existingStr) {
-            const list = JSON.parse(existingStr).filter(item => item.id !== id);
-            localStorage.setItem('mind_surveys_backup', JSON.stringify(list));
-          }
-        } catch (e) {}
-
-        const db = await MindDB.open();
-        if (db) {
-          try {
-            const tx = db.transaction(STORE_NAME, 'readwrite');
-            const store = tx.objectStore(STORE_NAME);
-            store.delete(id);
-          } catch (e) {}
-        }
-      },
-
-      clearAll: async () => {
-        try { localStorage.removeItem('mind_surveys_backup'); } catch(e) {}
-        const db = await MindDB.open();
-        if (db) {
-          try {
-            const tx = db.transaction(STORE_NAME, 'readwrite');
-            const store = tx.objectStore(STORE_NAME);
-            store.clear();
-          } catch (e) {}
-        }
-      },
-
-      exportJSON: (records) => {
-        const jsonStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records, null, 2));
-        const a = document.createElement('a');
-        a.setAttribute("href", jsonStr);
-        a.setAttribute("download", `mind_lens_research_db_${Date.now()}.json`);
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      },
-
-      exportCSV: (records) => {
-        if (!records || !records.length) {
-          alert("내보낼 설문 기록이 없습니다.");
-          return;
-        }
-        const headers = ["ID", "작성일시", "내담자닉네임", "1_컨디션", "2_계기", "3_생각", "4_감정", "5_몸느낌", "6_회피행동", "7_남은결과", "8_긍정대처"];
-        const rows = records.map(item => {
-          const seqMap = {};
-          (item.sequence || []).forEach(s => { seqMap[s.type] = s.label; });
-          return [
-            item.id,
-            `"${item.date || ''}"`,
-            `"${item.nickname || ''}"`,
-            `"${seqMap['컨디션'] || ''}"`,
-            `"${seqMap['계기'] || ''}"`,
-            `"${seqMap['생각'] || ''}"`,
-            `"${seqMap['감정'] || ''}"`,
-            `"${seqMap['몸느낌'] || ''}"`,
-            `"${seqMap['행동'] || ''}"`,
-            `"${seqMap['결과'] || ''}"`,
-            `"${seqMap['긍정대처'] || ''}"`
-          ].join(',');
-        });
-        const csvContent = "\uFEFF" + [headers.join(','), ...rows].join('\n');
-        const encodedUri = "data:text/csv;charset=utf-8," + encodeURIComponent(csvContent);
-        const a = document.createElement('a');
-        a.setAttribute("href", encodedUri);
-        a.setAttribute("download", `mind_lens_research_data_${Date.now()}.csv`);
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      }
-    };
+    // mind-db.js 모듈에서 제공하는 전역 MindDB (Firebase Firestore + Local Fallback)를 사용합니다.
 
     // ==========================================
     // 마크다운 렌더러
@@ -236,7 +112,7 @@
       const [records, setRecords] = useState([]);
       const [selectedNickname, setSelectedNickname] = useState('ALL');
       const [selectedSessionId, setSelectedSessionId] = useState(null);
-      const [activeTab, setActiveTab] = useState('report'); // 'report' | 'network' | 'db'
+      const [activeTab, setActiveTab] = useState('report'); // 'report' | 'network' | 'clients'
 
       // Gemini API 키 (localStorage 저장)
       const [apiKey, setApiKey] = useState(() => localStorage.getItem('mind_gemini_api_key') || '');
@@ -246,16 +122,279 @@
 
       const svgRef = useRef(null);
 
-      // 데이터베이스 레코드 로드
+      // 클라우드 DB 상태 및 모달
+      const [dbStatus, setDbStatus] = useState(() => MindDB.getStatus());
+      const [showDbModal, setShowDbModal] = useState(false);
+      const [configInput, setConfigInput] = useState('');
+      const [dbMessage, setDbMessage] = useState('');
+      const [isTesting, setIsTesting] = useState(false);
+      const [newArrivalAlert, setNewArrivalAlert] = useState(null); // 실시간 수신 알림 토스트
+      const prevRecordCountRef = useRef(null);
+
+      // 상담자 전용 비공개 내담자 프로필 & 메모 상태 (내담자 앱에 비노출)
+      const [profiles, setProfiles] = useState({});
+      const [notes, setNotes] = useState([]);
+      const [profileGender, setProfileGender] = useState('미지정');
+      const [profileAge, setProfileAge] = useState('');
+      const [profileIntakeDate, setProfileIntakeDate] = useState('');
+      const [profileConcern, setProfileConcern] = useState('');
+      const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+      // 새 임상 메모 입력 폼 상태
+      const [noteCategory, setNoteCategory] = useState('임상관찰');
+      const [noteTitle, setNoteTitle] = useState('');
+      const [noteContent, setNoteContent] = useState('');
+      const [isSavingNote, setIsSavingNote] = useState(false);
+
+      // 데이터베이스 실시간 구독 (내담자 제출 시 실시간 자동 수신)
+      useEffect(() => {
+        const unsubscribe = MindDB.subscribe(
+          (data) => {
+            const list = data || [];
+            // 신규 데이터 수신 감지 (최초 로드 이후 개수 증가 시)
+            if (prevRecordCountRef.current !== null && list.length > prevRecordCountRef.current) {
+              const latest = list[0];
+              const nick = latest ? (latest.nickname || '익명 내담자') : '내담자';
+              setNewArrivalAlert({
+                nickname: nick,
+                time: new Date().toLocaleTimeString(),
+                id: latest ? latest.id : Date.now()
+              });
+              setTimeout(() => {
+                setNewArrivalAlert(null);
+              }, 6000);
+            }
+            prevRecordCountRef.current = list.length;
+            setRecords(list);
+            setDbStatus(MindDB.getStatus());
+          },
+          (err) => {
+            console.error("DB 리스너 오류:", err);
+            setDbStatus(MindDB.getStatus());
+          }
+        );
+
+        return () => {
+          if (typeof unsubscribe === 'function') unsubscribe();
+        };
+      }, []);
+
       const refreshData = () => {
         MindDB.getAll().then(data => {
-          setRecords(data);
+          setRecords(data || []);
+          setDbStatus(MindDB.getStatus());
         });
       };
 
+      // 1. 상담자 전용 내담자 프로필 실시간 구독
       useEffect(() => {
-        refreshData();
+        const unsubscribe = MindDB.Profile.subscribe((map) => {
+          setProfiles(map || {});
+        });
+        return () => {
+          if (typeof unsubscribe === 'function') unsubscribe();
+        };
       }, []);
+
+      // 2. 선택된 내담자 변경 시 프로필 폼 상태 동기화 및 메모 실시간 구독
+      useEffect(() => {
+        if (!selectedNickname || selectedNickname === 'ALL') {
+          setNotes([]);
+          setProfileGender('미지정');
+          setProfileAge('');
+          setProfileIntakeDate('');
+          setProfileConcern('');
+          return;
+        }
+
+        const p = profiles[selectedNickname];
+        if (p) {
+          setProfileGender(p.gender || '미지정');
+          setProfileAge(p.age || '');
+          setProfileIntakeDate(p.intakeDate || '');
+          setProfileConcern(p.primaryConcern || '');
+        } else {
+          MindDB.Profile.get(selectedNickname).then(fetched => {
+            if (fetched) {
+              setProfileGender(fetched.gender || '미지정');
+              setProfileAge(fetched.age || '');
+              setProfileIntakeDate(fetched.intakeDate || '');
+              setProfileConcern(fetched.primaryConcern || '');
+            } else {
+              setProfileGender('미지정');
+              setProfileAge('');
+              setProfileIntakeDate(new Date().toLocaleDateString('ko-KR'));
+              setProfileConcern('');
+            }
+          });
+        }
+
+        const unsubNotes = MindDB.Notes.subscribe(selectedNickname, (list) => {
+          setNotes(list || []);
+        });
+
+        return () => {
+          if (typeof unsubNotes === 'function') unsubNotes();
+        };
+      }, [selectedNickname, profiles]);
+
+      // 내담자 기본정보 (성별, 나이 등) 저장 핸들러
+      const handleSaveProfile = async (e) => {
+        if (e) e.preventDefault();
+        if (!selectedNickname || selectedNickname === 'ALL') {
+          alert("먼저 좌측에서 특정 내담자를 선택해 주세요.");
+          return;
+        }
+        setIsSavingProfile(true);
+        try {
+          const updated = {
+            nickname: selectedNickname,
+            gender: profileGender,
+            age: profileAge ? Number(profileAge) : '',
+            intakeDate: profileIntakeDate || new Date().toLocaleDateString('ko-KR'),
+            primaryConcern: profileConcern.trim(),
+            updatedAt: new Date().toISOString()
+          };
+          await MindDB.Profile.save(updated);
+          setProfiles(prev => ({ ...prev, [selectedNickname]: updated }));
+          alert(`[${selectedNickname}] 님의 기본 정보가 클라우드 DB에 안전하게 저장되었습니다.\n(내담자 앱에는 노출되지 않는 비밀 정보입니다)`);
+        } finally {
+          setIsSavingProfile(false);
+        }
+      };
+
+      // 새 임상 메모 등록 핸들러
+      const handleAddNote = async (e) => {
+        e.preventDefault();
+        if (!selectedNickname || selectedNickname === 'ALL') {
+          alert("먼저 메모를 작성할 내담자를 좌측에서 선택해 주세요.");
+          return;
+        }
+        if (!noteContent.trim()) {
+          alert("메모 내용을 입력해 주세요.");
+          return;
+        }
+        setIsSavingNote(true);
+        try {
+          const now = new Date();
+          const pad = n => n.toString().padStart(2, '0');
+          const dateStr = `${now.getFullYear()}.${pad(now.getMonth() + 1)}.${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+          const newNote = {
+            id: Date.now(),
+            nickname: selectedNickname,
+            category: noteCategory,
+            title: noteTitle.trim() || `${now.toLocaleDateString('ko-KR')} 상담 메모`,
+            content: noteContent.trim(),
+            date: dateStr,
+            createdAt: now.toISOString()
+          };
+
+          await MindDB.Notes.save(newNote);
+          setNoteTitle('');
+          setNoteContent('');
+        } finally {
+          setIsSavingNote(false);
+        }
+      };
+
+      // 메모 삭제 핸들러
+      const handleDeleteNote = async (noteId) => {
+        if (confirm("해당 임상 메모를 영구 삭제하시겠습니까?")) {
+          await MindDB.Notes.delete(noteId);
+        }
+      };
+
+      // 개별 세션 기록 삭제 핸들러
+      const handleDeleteRecord = async (e, id) => {
+        e.stopPropagation();
+        if (confirm(`해당 세션 기록(#${id})을 영구 삭제하시겠습니까?`)) {
+          await MindDB.deleteRecord(id);
+          if (selectedSessionId === id) setSelectedSessionId(null);
+        }
+      };
+
+      // 전체 세션 초기화 핸들러
+      const handleClearAll = async () => {
+        if (confirm("정말로 모든 세션 데이터를 초기화(삭제)하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) {
+          await MindDB.clearAll();
+          setSelectedSessionId(null);
+          setRecords([]);
+        }
+      };
+
+      // 로컬 데이터 -> Firebase 일괄 업로드 (마이그레이션)
+      const handleMigrate = async () => {
+        try {
+          setDbMessage('로컬 데이터를 클라우드로 전송 중...');
+          const result = await MindDB.migrateLocalToFirebase();
+          setDbMessage(result.message);
+          refreshData();
+        } catch (err) {
+          setDbMessage('마이그레이션 실패: ' + err.message);
+        }
+      };
+
+      // Firebase 실제 연결 테스트
+      const handleTestConnection = async () => {
+        setIsTesting(true);
+        setDbMessage('클라우드 DB 연결 및 권한 확인 중...');
+        try {
+          const res = await MindDB.testConnection();
+          if (res.success) {
+            setDbMessage('✅ ' + res.message);
+          } else {
+            setDbMessage('❌ 연결 실패: ' + res.error);
+          }
+        } catch (e) {
+          setDbMessage('❌ 테스트 오류: ' + e.message);
+        } finally {
+          setIsTesting(false);
+        }
+      };
+
+      // 내담자 전용 원클릭 초대 링크 복사
+      const handleCopyClientUrl = () => {
+        const clientUrl = MindDB.generateClientInviteUrl();
+        navigator.clipboard.writeText(clientUrl).then(() => {
+          alert("📱 내담자 원클릭 접속 링크가 클립보드에 복사되었습니다!\n\n이 링크를 내담자의 스마트폰이나 개인 PC로 전달하시면, 별도 DB 설정 없이 바로 동일한 클라우드 DB에 연결되어 설문을 제출할 수 있습니다.");
+        }).catch(() => {
+          prompt("아래 링크를 복사하여 내담자에게 전달하세요:", clientUrl);
+        });
+      };
+
+      // Firebase 설정 저장
+      const handleSaveConfig = () => {
+        try {
+          const parsed = JSON.parse(configInput);
+          if (!parsed.apiKey || !parsed.projectId) {
+            alert("apiKey와 projectId는 필수 항목입니다.");
+            return;
+          }
+          const res = MindDB.saveConfig(parsed);
+          if (res.success) {
+            alert("Firebase 클라우드 DB가 성공적으로 설정되었습니다!\n연결 테스트를 진행합니다.");
+            setShowDbModal(false);
+            setDbStatus(MindDB.getStatus());
+            refreshData();
+            handleTestConnection();
+          } else {
+            alert("Firebase 연결 실패: " + (res.error || '설정값을 확인하세요.'));
+          }
+        } catch (e) {
+          alert("JSON 형식이 올바르지 않습니다. 중괄호 {} 형태의 JSON 객체를 붙여넣어 주세요.");
+        }
+      };
+
+      // Firebase 설정 초기화 (로컬 모드로 전환)
+      const handleResetConfig = () => {
+        if (confirm("Firebase 설정을 제거하고 로컬 브라우저 모드로 전환하시겠습니까?")) {
+          MindDB.resetConfig();
+          setDbStatus(MindDB.getStatus());
+          setShowDbModal(false);
+          refreshData();
+        }
+      };
 
       // 고유 닉네임 목록 도출
       const nicknames = useMemo(() => {
@@ -474,14 +613,19 @@
 
         const cleanKey = apiKey.trim();
 
+        const clientProfile = (selectedNickname && selectedNickname !== 'ALL') ? profiles[selectedNickname] : null;
+        const profileInfoStr = clientProfile 
+          ? `내담자 기본 인적사항: ${clientProfile.gender || '성별 미상'}, 만 ${clientProfile.age ? clientProfile.age + '세' : '연령 미상'}${clientProfile.primaryConcern ? ' (주호소: ' + clientProfile.primaryConcern + ')' : ''}`
+          : '전체 내담자 집단 통합 분석';
+
         // Gemini API 키가 있는 경우: 실제 실시간 LLM 자동 생성
         if (cleanKey) {
           try {
             const prompt = `당신은 행동활성화(Behavioral Activation, BA) 및 네트워크 심리측정학(Network Psychometrics) 분야의 권위 있는 수석 임상심리학자 겸 연구책임자입니다.
-다음 내담자의 실제 상태 전이 네트워크 데이터를 정밀 분석하고, 학술 연구 및 임상 사례보고서 수준의 [동적 상태 전이 네트워크 및 수반성 평가 소견서]를 작성해 주세요.
+다음 내담자의 실제 상태 전이 네트워크 데이터 및 인적 프로필을 정밀 분석하고, 학술 연구 및 임상 사례보고서 수준의 [동적 상태 전이 네트워크 및 수반성 평가 소견서]를 작성해 주세요.
 
 [내담자 데이터 세부 내역]
-분석 대상: ${targetDesc}
+분석 대상: ${targetDesc} (${profileInfoStr})
 총 분석 체인 수: ${metrics.totalChains}회
 고유 노드 수: ${metrics.totalNodes}개
 
@@ -496,7 +640,7 @@ ${sessionDetails}
 - 긍정적 대처 자원 노드(Positive Coping Resource): ${metrics.topPositiveCoping}
 - 최다 빈도 전이 엣지: ${metrics.topTransition}
 
-[작성 가이드라인 - 하드코딩 문구 없이 위 실제 데이터를 철저히 기반으로 서술할 것]
+[작성 가이드라인 - 내담자의 연령/성별 특성 및 위 실제 데이터를 철저히 기반으로 서술할 것]
 # 1. TRAP 모델 기반 동적 부적 강화 수반성 (Negative Reinforcement Contingency) 분석
 - 내담자가 경험한 Trigger(${metrics.topTrigger})와 신체·정서 반응(${metrics.topEmotion}, ${metrics.topBody})이 어떤 조건부 전이 확률로 회피 행동 [${metrics.topBottleneck}]에 수렴하는지 메커니즘을 상세히 규명할 것.
 - 단기적 고통 회피(부적 강화)가 어떻게 긍정적 보상과의 접촉을 차단하고 이차 손실([${metrics.topOutcome}])을 고착시키는지 학술적으로 분석할 것.
@@ -536,7 +680,9 @@ ${sessionDetails}
         }
 
         // Gemini API 키가 없거나 실패 시: 내담자의 실제 모든 입력값을 조합한 정밀 알고리즘 자동 보고서 생성
-        const autoGeneratedReport = `## 1. TRAP 모델 기반 동적 부적 강화 수반성 (Negative Reinforcement Contingency) 분석
+        const autoGeneratedReport = `> **[임상 프로필]** ${profileInfoStr}
+
+## 1. TRAP 모델 기반 동적 부적 강화 수반성 (Negative Reinforcement Contingency) 분석
 본 내담자(분석 표본 N=${metrics.totalChains})의 상태 전이 네트워크를 분석한 결과, 주 촉발 기폭제(Ignition Node)인 **[${metrics.ignitionNode}]** 및 취약 신체/정서 상태(**${metrics.topEmotion}**, **${metrics.topBody}**)는 높은 조건부 전이 확률로 회피성 중심 허브 행동인 **[${metrics.topBottleneck}]**으로 수렴하고 있습니다.
 
 이 패턴은 심리적 고통으로부터의 일시적 격리라는 단기 부적 강화(Negative Reinforcement)를 제공하여 행동의 빈도를 유지시키고 있으나, 그 대가로 환경 내 긍정적 강화물과의 접촉을 박탈(Extinction of Positive Reinforcers)시키며, 최종적으로 **[${metrics.topOutcome}]**이라는 심각한 이차적 기능 손상(Secondary Loss)으로 귀결되는 악순환 루프를 형성하고 있습니다.
@@ -593,13 +739,45 @@ ${sessionDetails}
             </div>
 
             <div className="flex items-center gap-3">
+              {/* 클라우드 DB 연결 상태 및 설정 버튼 */}
+              <button
+                onClick={() => {
+                  const currentCfg = MindDB.getConfig();
+                  setConfigInput(currentCfg ? JSON.stringify(currentCfg, null, 2) : '');
+                  setDbMessage('');
+                  setShowDbModal(true);
+                }}
+                className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 border shadow-sm touch-btn transition-all ${
+                  dbStatus.isCloud
+                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700 hover:bg-emerald-900'
+                    : 'bg-amber-950/80 text-amber-300 border-amber-700 hover:bg-amber-900'
+                }`}
+                title="Firebase Firestore 클라우드 영구 DB 설정"
+              >
+                <span className="w-2 h-2 rounded-full inline-block animate-pulse bg-current"></span>
+                <span>{dbStatus.isCloud ? '클라우드 DB 실시간 연동' : '로컬 모드 (DB 설정 필요)'}</span>
+                <span className="text-[11px] opacity-70">⚙️</span>
+              </button>
+
+              {/* 내담자 원클릭 접속 링크 복사 버튼 */}
+              <button
+                onClick={handleCopyClientUrl}
+                className="px-3 py-2 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 border border-indigo-700 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm touch-btn"
+                title="스마트폰이나 다른 기기에서 접속할 수 있는 내담자 설문 링크를 복사합니다"
+              >
+                <span>📱</span>
+                <span>내담자 링크 복사</span>
+              </button>
+
               <a
                 href="app.html"
+                target="_blank"
+                rel="noreferrer"
                 className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-amber-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md touch-btn"
-                title="내담자용 화면 열기"
+                title="내담자용 화면 새 탭에서 열기"
               >
                 <span>🌻</span>
-                <span>내담자용 앱으로 이동</span>
+                <span>내담자용 앱 열기</span>
               </a>
 
               <button
@@ -638,11 +816,39 @@ ${sessionDetails}
                   <option value="ALL">전체 내담자 통합 분석 ({records.length}건)</option>
                   {nicknames.map(name => {
                     const count = records.filter(r => (r.nickname || '익명') === name).length;
+                    const p = profiles[name];
+                    const meta = [];
+                    if (p && p.age) meta.push(`${p.age}세`);
+                    if (p && p.gender && p.gender !== '미지정') meta.push(p.gender);
+                    const metaStr = meta.length > 0 ? ` [${meta.join('/')}]` : '';
                     return (
-                      <option key={name} value={name}>{name} ({count}회 기록)</option>
+                      <option key={name} value={name}>{name}{metaStr} ({count}회 기록)</option>
                     );
                   })}
                 </select>
+
+                {selectedNickname !== 'ALL' && (
+                  <div className="mt-2.5 p-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-xs space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-indigo-300">
+                        {selectedNickname} {profiles[selectedNickname]?.age ? `(${profiles[selectedNickname].age}세` : ''}{profiles[selectedNickname]?.gender && profiles[selectedNickname].gender !== '미지정' ? `/${profiles[selectedNickname].gender})` : (profiles[selectedNickname]?.age ? ')' : '')}
+                      </span>
+                      <button
+                        onClick={() => setActiveTab('clients')}
+                        className="text-[11px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1"
+                        title="내담자 기본정보 및 임상 메모 탭으로 이동"
+                      >
+                        <span>📝 메모/정보</span>
+                        <span className="bg-amber-950/80 border border-amber-800 px-1 rounded text-[10px] text-amber-300 font-mono">{notes.length}건</span>
+                      </button>
+                    </div>
+                    {profiles[selectedNickname]?.primaryConcern && (
+                      <div className="text-[11px] text-slate-400 truncate">
+                        주호소: {profiles[selectedNickname].primaryConcern}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* 세션 히스토리 타임라인 (정확한 일시 표시) */}
@@ -673,7 +879,7 @@ ${sessionDetails}
                         <div
                           key={r.id}
                           onClick={() => setSelectedSessionId(isSelected ? null : r.id)}
-                          className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                          className={`p-3 rounded-xl border cursor-pointer transition-all relative group ${
                             isSelected 
                               ? 'bg-indigo-950/80 border-indigo-500 shadow-md ring-1 ring-indigo-400' 
                               : 'bg-slate-850 bg-slate-800/60 border-slate-700 hover:border-slate-600'
@@ -681,9 +887,18 @@ ${sessionDetails}
                         >
                           <div className="flex items-center justify-between font-bold mb-1">
                             <span className="text-indigo-300 font-mono">{r.date}</span>
-                            <span className="px-1.5 py-0.5 bg-slate-700 text-slate-300 rounded text-[10px]">
-                              {r.nickname || '익명'}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-1.5 py-0.5 bg-slate-700 text-slate-300 rounded text-[10px]">
+                                {r.nickname || '익명'}
+                              </span>
+                              <button
+                                onClick={(e) => handleDeleteRecord(e, r.id)}
+                                title="이 세션 삭제"
+                                className="opacity-0 group-hover:opacity-100 hover:text-rose-400 text-slate-500 p-0.5 transition-opacity"
+                              >
+                                🗑️
+                              </button>
+                            </div>
                           </div>
                           <div className="text-slate-400 text-[11px] truncate">
                             ⚡ {seqMap['계기'] || '-'} ➔ 🏃 <span className="text-amber-400 font-bold">{seqMap['행동'] || '-'}</span>
@@ -702,7 +917,7 @@ ${sessionDetails}
 
               {/* DB 내보내기 & 관리 버튼들 */}
               <div className="pt-3 border-t border-slate-800 space-y-2">
-                <span className="text-xs font-bold text-slate-500 block">데이터 추출 및 백업</span>
+                <span className="text-xs font-bold text-slate-500 block">데이터 백업 & 관리</span>
                 <div className="flex gap-2">
                   <button
                     onClick={() => MindDB.exportCSV(records)}
@@ -715,6 +930,26 @@ ${sessionDetails}
                     className="flex-1 py-2 bg-indigo-700 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold shadow touch-btn flex items-center justify-center gap-1"
                   >
                     <span>📥</span> JSON 덤프
+                  </button>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => {
+                      const currentCfg = MindDB.getConfig();
+                      setConfigInput(currentCfg ? JSON.stringify(currentCfg, null, 2) : '');
+                      setDbMessage('');
+                      setShowDbModal(true);
+                    }}
+                    className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1"
+                  >
+                    <span>⚙️</span> DB 설정
+                  </button>
+                  <button
+                    onClick={handleClearAll}
+                    className="py-1.5 px-3 bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1"
+                    title="모든 설문 데이터 비우기"
+                  >
+                    <span>🗑️</span> 초기화
                   </button>
                 </div>
               </div>
@@ -740,6 +975,19 @@ ${sessionDetails}
                     }`}
                   >
                     <span>🕸️</span> 네트워크 전이 지도
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('clients')}
+                    className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 touch-btn ${
+                      activeTab === 'clients' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+                    }`}
+                  >
+                    <span>📋</span> 내담자 기본정보 & 임상 메모
+                    {selectedNickname !== 'ALL' && notes.length > 0 && (
+                      <span className="px-1.5 py-0.2 bg-indigo-900 text-indigo-300 rounded-full text-[10px] font-mono">
+                        {notes.length}
+                      </span>
+                    )}
                   </button>
                 </div>
 
@@ -844,8 +1092,405 @@ ${sessionDetails}
                   </div>
                 </div>
               )}
+
+              {/* 3. 내담자 기본정보 & 상담자 비공개 임상 메모 탭 */}
+              {activeTab === 'clients' && (
+                <div className="space-y-5">
+                  {/* 보안 안내 배너 */}
+                  <div className="p-4 bg-indigo-950/40 border border-indigo-800/80 rounded-2xl flex items-start gap-3 shadow-md">
+                    <span className="text-2xl">🔒</span>
+                    <div className="text-xs">
+                      <strong className="text-indigo-300 font-bold block text-sm mb-0.5">
+                        상담자 전용 보안 영역 (Clinical Confidential Record)
+                      </strong>
+                      <span className="text-slate-300 leading-relaxed">
+                        이곳에서 관리하는 <strong>내담자 기본 정보(성별, 나이, 접수일, 주호소)</strong> 및 <strong>회기별 임상 메모 히스토리</strong>는 상담자 전용 클라우드 데이터베이스에 영구 보관되며, 
+                        <span className="text-amber-300 font-bold"> 내담자용 모바일/웹 앱(app.html)에는 일절 노출되지 않습니다.</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {selectedNickname === 'ALL' ? (
+                    <div className="p-12 text-center bg-slate-900 rounded-3xl border border-slate-800 space-y-3">
+                      <span className="text-4xl block">👤</span>
+                      <h3 className="text-base font-bold text-slate-200">내담자를 먼저 선택해 주세요</h3>
+                      <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                        좌측 사이드바의 <strong>[👤 내담자 선택]</strong> 드롭다운에서 관리하실 내담자를 선택하시면 기본 인적사항(성별, 나이) 입력과 회기별 비공개 임상 메모 타임라인이 활성화됩니다.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                      {/* 좌측 5열: 내담자 기본 인적사항 관리 */}
+                      <div className="lg:col-span-5 space-y-4">
+                        <div className="p-5 bg-slate-900 rounded-3xl border border-slate-800 shadow-xl space-y-4">
+                          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl">📋</span>
+                              <h3 className="font-bold text-white text-base">
+                                <strong className="text-indigo-400">{selectedNickname}</strong> 님 기본 정보
+                              </h3>
+                            </div>
+                            <span className="px-2 py-0.5 bg-slate-800 text-indigo-300 text-[11px] rounded-md font-mono border border-slate-700">
+                              비공개 보관
+                            </span>
+                          </div>
+
+                          <form onSubmit={handleSaveProfile} className="space-y-3.5 text-xs">
+                            {/* 성별 선택 */}
+                            <div>
+                              <label className="block text-slate-300 font-bold mb-1.5">성별 (Gender)</label>
+                              <div className="grid grid-cols-4 gap-1.5">
+                                {['미지정', '여성', '남성', '기타'].map(g => (
+                                  <button
+                                    type="button"
+                                    key={g}
+                                    onClick={() => setProfileGender(g)}
+                                    className={`py-2 rounded-xl font-bold text-xs border transition-all ${
+                                      profileGender === g
+                                        ? 'bg-indigo-600 border-indigo-500 text-white shadow-md'
+                                        : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750'
+                                    }`}
+                                  >
+                                    {g}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* 나이(연령) & 접수일 */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-slate-300 font-bold mb-1.5">만 나이 (Age)</label>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max="120"
+                                    placeholder="예: 28"
+                                    value={profileAge}
+                                    onChange={(e) => setProfileAge(e.target.value)}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-indigo-500"
+                                  />
+                                  <span className="absolute right-3 top-2 text-slate-500 text-xs">세</span>
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-slate-300 font-bold mb-1.5">초기 접수일</label>
+                                <input
+                                  type="text"
+                                  placeholder="예: 2026.09.05"
+                                  value={profileIntakeDate}
+                                  onChange={(e) => setProfileIntakeDate(e.target.value)}
+                                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-indigo-500"
+                                />
+                              </div>
+                            </div>
+
+                            {/* 주호소 및 임상 이슈 */}
+                            <div>
+                              <label className="block text-slate-300 font-bold mb-1.5">주호소 문제 (Chief Complaint)</label>
+                              <textarea
+                                rows={3}
+                                placeholder="예: 직장 내 대인관계 갈등으로 인한 극심한 불안, 회피성 음주 및 지각 반복"
+                                value={profileConcern}
+                                onChange={(e) => setProfileConcern(e.target.value)}
+                                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white text-xs leading-relaxed focus:outline-none focus:border-indigo-500 font-sans"
+                              />
+                            </div>
+
+                            <button
+                              type="submit"
+                              disabled={isSavingProfile}
+                              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/20 touch-btn flex items-center justify-center gap-1.5 text-xs transition-all"
+                            >
+                              <span>💾</span>
+                              <span>{isSavingProfile ? '클라우드 저장 중...' : '기본 정보 저장 (클라우드 영구 보관)'}</span>
+                            </button>
+                          </form>
+                        </div>
+
+                        {/* 내담자 설문 현황 미니 통계 */}
+                        <div className="p-4 bg-slate-900/60 rounded-2xl border border-slate-800 text-xs space-y-2">
+                          <div className="text-slate-400 font-bold flex items-center justify-between">
+                            <span>📊 마음 돋보기 설문 참여 현황</span>
+                            <span className="text-indigo-400 font-mono font-bold">{filteredRecords.length}회 참여</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400">
+                            최근 설문 일시: <strong className="text-slate-200">{filteredRecords[0]?.date || '없음'}</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 우측 7열: 상담자 비공개 임상 메모 히스토리 */}
+                      <div className="lg:col-span-7 space-y-4">
+                        {/* 새 메모 작성 폼 */}
+                        <div className="p-5 bg-slate-900 rounded-3xl border border-slate-800 shadow-xl space-y-3">
+                          <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                            <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                              <span>✍️</span> 새 임상 메모 / 회기 관찰 기록
+                            </span>
+                            <span className="text-[11px] text-indigo-400 font-medium">
+                              상담자 비밀 노트
+                            </span>
+                          </div>
+
+                          <form onSubmit={handleAddNote} className="space-y-3 text-xs">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <label className="text-slate-400 font-bold">카테고리:</label>
+                              <div className="flex flex-wrap gap-1">
+                                {['임상관찰', '치료계획', '회기평가', '과제점검', '위기개입'].map(cat => (
+                                  <button
+                                    type="button"
+                                    key={cat}
+                                    onClick={() => setNoteCategory(cat)}
+                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all ${
+                                      noteCategory === cat
+                                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-sm'
+                                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
+                                    }`}
+                                  >
+                                    {cat}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <input
+                              type="text"
+                              placeholder="메모 제목 (예: 2회기 행동 연쇄 분석 및 인지 왜곡 탐색)"
+                              value={noteTitle}
+                              onChange={(e) => setNoteTitle(e.target.value)}
+                              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-indigo-500 font-medium"
+                            />
+
+                            <textarea
+                              rows={4}
+                              placeholder="상담 회기 중 관찰된 행동 특성, 저항, 치료적 개입 내용, 숙제(긍정 대처 실천) 반응 등을 기록하세요..."
+                              value={noteContent}
+                              onChange={(e) => setNoteContent(e.target.value)}
+                              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white text-xs leading-relaxed focus:outline-none focus:border-indigo-500 font-mono"
+                            />
+
+                            <div className="flex justify-end">
+                              <button
+                                type="submit"
+                                disabled={isSavingNote || !noteContent.trim()}
+                                className="px-5 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-800 text-white font-bold rounded-xl text-xs shadow touch-btn flex items-center gap-1.5 transition-all"
+                              >
+                                <span>📌</span>
+                                <span>{isSavingNote ? '저장 중...' : '메모 등록 (클라우드 영구 보관)'}</span>
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+
+                        {/* 누적 메모 히스토리 타임라인 */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between px-1">
+                            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                              <span>📜</span>
+                              <span>누적 임상 메모 히스토리 ({notes.length}건)</span>
+                            </span>
+                            <span className="text-[11px] text-slate-500">최신순 정렬</span>
+                          </div>
+
+                          {notes.length === 0 ? (
+                            <div className="p-8 text-center bg-slate-900/50 rounded-2xl border border-slate-800 text-slate-500 text-xs">
+                              아직 기록된 상담 메모가 없습니다. 위의 작성 폼에서 첫 회기 메모를 남겨보세요.
+                            </div>
+                          ) : (
+                            <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
+                              {notes.map(n => (
+                                <div
+                                  key={n.id}
+                                  className="p-4 bg-slate-900 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all space-y-2 shadow-sm relative group"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-950 border border-indigo-700 text-indigo-300">
+                                        {n.category || '임상관찰'}
+                                      </span>
+                                      <strong className="text-white text-xs font-bold">{n.title}</strong>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-[11px] font-mono text-slate-400">{n.date}</span>
+                                      <button
+                                        onClick={() => handleDeleteNote(n.id)}
+                                        className="text-slate-500 hover:text-rose-400 text-xs p-1 opacity-60 group-hover:opacity-100 transition-opacity"
+                                        title="메모 삭제"
+                                      >
+                                        🗑️
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap font-mono">
+                                    {n.content}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </main>
           </div>
+
+          {/* Firebase 클라우드 영구 DB 설정 모달 */}
+          {showDbModal && (
+            <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+              <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-7 max-w-xl w-full shadow-2xl space-y-5 text-slate-200">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-2xl">☁️</span>
+                    <div>
+                      <h3 className="text-lg font-black text-white">Firebase 클라우드 영구 DB 연동</h3>
+                      <p className="text-xs text-slate-400">내담자(스마트폰/PC)와 상담자 간 실시간 원격 데이터 동기화</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowDbModal(false)}
+                    className="text-slate-400 hover:text-white text-xl p-1 font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* 연결 상태 표시 */}
+                <div className={`p-3 rounded-2xl border text-xs flex items-center justify-between ${
+                  dbStatus.isCloud
+                    ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
+                    : 'bg-amber-950/60 border-amber-800 text-amber-300'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">{dbStatus.isCloud ? '🟢' : '🟡'}</span>
+                    <div>
+                      <strong className="block font-bold">{dbStatus.label}</strong>
+                      <span className="text-[11px] opacity-80">
+                        {dbStatus.isCloud
+                          ? '내담자가 제출하는 설문이 실시간으로 이 화면에 즉각 수신됩니다.'
+                          : '현재는 이 브라우저에만 데이터가 저장됩니다. 원격 접속을 위해 Firebase를 연동하세요.'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 설정 입력 영역 */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-300">
+                      Firebase Web App Config (JSON 형태)
+                    </label>
+                    <span className="text-[11px] text-indigo-400">firebaseConfig 객체 복사 붙여넣기</span>
+                  </div>
+                  <textarea
+                    rows={6}
+                    value={configInput}
+                    onChange={(e) => setConfigInput(e.target.value)}
+                    placeholder={`{\n  "apiKey": "AIzaSy...",\n  "authDomain": "your-app.firebaseapp.com",\n  "projectId": "your-app",\n  "storageBucket": "your-app.appspot.com",\n  "messagingSenderId": "123456789",\n  "appId": "1:123:web:abc"\n}`}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-2xl p-3 text-xs font-mono text-indigo-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  />
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    💡 <strong>firebase-config.js</strong> 파일을 직접 수정하시거나, 여기에 복사한 JSON을 넣고 [저장 및 연결]을 누르면 즉시 연동됩니다.
+                  </p>
+                </div>
+
+                {/* 상태 메시지 */}
+                {dbMessage && (
+                  <div className="p-3 bg-slate-800 border border-slate-700 rounded-xl text-xs text-indigo-300 font-medium">
+                    {dbMessage}
+                  </div>
+                )}
+
+                {/* 연결 테스트 및 내담자 링크 안내 */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button
+                    onClick={handleTestConnection}
+                    disabled={isTesting}
+                    className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 touch-btn"
+                  >
+                    <span>{isTesting ? '⏳' : '🔍'}</span>
+                    <span>{isTesting ? '테스트 진행 중...' : '클라우드 DB 연결 & 권한 테스트'}</span>
+                  </button>
+                  <button
+                    onClick={handleCopyClientUrl}
+                    className="py-2 px-3 bg-indigo-950/70 hover:bg-indigo-900 text-indigo-200 border border-indigo-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 touch-btn"
+                    title="내담자 스마트폰으로 보낼 원클릭 링크를 복사합니다"
+                  >
+                    <span>📱</span>
+                    <span>내담자 링크 복사</span>
+                  </button>
+                </div>
+
+                {/* 로컬 데이터 마이그레이션 안내 및 실행 */}
+                <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-300">📦 기존 로컬 데이터 이전</span>
+                    <button
+                      onClick={handleMigrate}
+                      className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold touch-btn shadow flex items-center gap-1"
+                    >
+                      <span>🚀</span> 클라우드로 일괄 업로드
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    현재 브라우저에 임시 저장되어 있는 설문 데이터를 새로 연결된 Firebase Firestore로 한 번에 보냅니다.
+                  </p>
+                </div>
+
+                {/* 모달 하단 버튼 */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                  <button
+                    onClick={handleResetConfig}
+                    className="px-3 py-2 text-rose-400 hover:text-rose-300 hover:bg-rose-950/50 rounded-xl text-xs font-bold"
+                  >
+                    설정 초기화 (로컬 모드로 복구)
+                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowDbModal(false)}
+                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold"
+                    >
+                      닫기
+                    </button>
+                    <button
+                      onClick={handleSaveConfig}
+                      className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 touch-btn"
+                    >
+                      저장 및 연결 ➔
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 🔔 실시간 내담자 설문 도착 토스트 알림 */}
+          {newArrivalAlert && (
+            <div className="fixed bottom-6 right-6 z-50 animate-bounce">
+              <div className="bg-indigo-600 text-white px-5 py-4 rounded-2xl shadow-2xl border-2 border-indigo-400 flex items-center gap-3">
+                <span className="text-2xl">🔔</span>
+                <div>
+                  <div className="font-extrabold text-sm flex items-center gap-1.5">
+                    <span>새로운 마음 설문이 도착했습니다!</span>
+                    <span className="text-xs bg-indigo-800 px-2 py-0.5 rounded-full">{newArrivalAlert.time}</span>
+                  </div>
+                  <div className="text-xs text-indigo-100 mt-0.5">
+                    내담자: <strong className="text-amber-300 font-bold">{newArrivalAlert.nickname}</strong>님의 8단계 체인이 실시간 반영되었습니다.
+                  </div>
+                </div>
+                <button
+                  onClick={() => setNewArrivalAlert(null)}
+                  className="ml-2 text-indigo-200 hover:text-white text-base font-black"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       );
     }

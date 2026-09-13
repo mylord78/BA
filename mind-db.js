@@ -64,7 +64,7 @@
     if (fromUrl) return fromUrl;
 
     // 2순위: firebase-config.js 파일에 직접 입력된 설정 (전체 기기 공통 영구 연결에 최우선 권장)
-    if (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey && window.FIREBASE_CONFIG.projectId) {
+    if (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey && window.FIREBASE_CONFIG.projectId && !window.FIREBASE_CONFIG.apiKey.includes('YOUR_')) {
       return window.FIREBASE_CONFIG;
     }
 

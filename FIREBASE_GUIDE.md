@@ -43,7 +43,9 @@
 ### 4단계: 프로젝트에 설정 적용하기 (2가지 방법 중 편한 것 선택)
 
 #### 방법 A. 파일에 직접 넣기 (권장)
-- 프로젝트 폴더의 `firebase-config.js` 파일을 열고, 복사한 설정값을 그대로 붙여넣습니다:
+- `firebase-config.example.js` 파일을 복사하여 `firebase-config.js` 파일을 생성합니다.
+  *(※ `firebase-config.js`는 `.gitignore`에 등록되어 있어 GitHub에 유출되지 않으니 안심하세요!)*
+- 복사한 설정값을 붙여넣습니다:
   ```javascript
   window.FIREBASE_CONFIG = {
     apiKey: "AIzaSy...",
@@ -107,7 +109,8 @@ service cloud.firestore {
 
 ## 📁 주요 파일 안내
 
-- `firebase-config.js`: Firebase 연결 인증 정보 파일
+- `firebase-config.example.js`: Firebase 연결 인증 정보 공개 템플릿
+- `firebase-config.js`: 로컬 실제 Firebase 연결 설정 파일 (.gitignore 보호)
 - `mind-db.js`: Firestore 실시간 동기화 및 로컬 Fallback 통합 DB 레이어
 - `app.html`: 내담자용 8단계 마음 돋보기 웹 앱 (모바일/PC 반응형)
 - `admin.html`: 연구자/상담사용 임상 분석 대시보드 (D3.js 네트워크 지도 + AI 소견서 + 실시간 수신)

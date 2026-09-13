@@ -200,6 +200,124 @@
       const [showDbModal, setShowDbModal] = useState(false);
       const [configInput, setConfigInput] = useState('');
 
+      // 사용자가 직접 입력했던 맞춤 답변들 (사용자 닉네임별 격리 보관)
+      const [customPresets, setCustomPresets] = useState(() => {
+        try {
+          const userKey = nickname || 'default';
+          const saved = localStorage.getItem('mind_custom_presets_' + userKey);
+          return saved ? JSON.parse(saved) : {};
+        } catch (e) {
+          return {};
+        }
+      });
+
+      // 닉네임 변경 시 해당 사용자의 맞춤 답변 목록 다시 로드
+      useEffect(() => {
+        try {
+          const userKey = nickname || 'default';
+          const saved = localStorage.getItem('mind_custom_presets_' + userKey);
+          setCustomPresets(saved ? JSON.parse(saved) : {});
+        } catch (e) {
+          setCustomPresets({});
+        }
+      }, [nickname]);
+
+      // 저장된 과거 체인 기록(chains)에서 PRESETS에 없는 커스텀 입력값을 찾아 자동 병합 (기기 변경/캐시 삭제 복구)
+      useEffect(() => {
+        if (!chains || chains.length === 0) return;
+        const myChains = nickname ? chains.filter(c => c.nickname === nickname) : chains;
+        if (myChains.length === 0) return;
+
+        setCustomPresets(prev => {
+          let hasChange = false;
+          const nextPresets = { ...prev };
+
+          myChains.forEach(chain => {
+            if (!Array.isArray(chain.sequence)) return;
+            chain.sequence.forEach((item, idx) => {
+              const step = idx + 1;
+              if (!item || !item.label) return;
+              const cleanLabel = item.label.trim();
+              if (!cleanLabel) return;
+
+              // 표준 PRESETS에 있는지 확인 (이모지 제외 순수 텍스트 비교)
+              const standardList = PRESETS[step] || [];
+              const isStandard = standardList.some(std => {
+                const cleanStd = std.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
+                return cleanStd === cleanLabel || std === cleanLabel;
+              });
+
+              if (!isStandard) {
+                if (!nextPresets[step]) nextPresets[step] = [];
+                if (!nextPresets[step].includes(cleanLabel)) {
+                  nextPresets[step] = [...nextPresets[step], cleanLabel];
+                  hasChange = true;
+                }
+              }
+            });
+          });
+
+          if (hasChange) {
+            try {
+              const userKey = nickname || 'default';
+              localStorage.setItem('mind_custom_presets_' + userKey, JSON.stringify(nextPresets));
+            } catch (e) {}
+            return nextPresets;
+          }
+          return prev;
+        });
+      }, [chains, nickname]);
+
+      // 맞춤 답변 추가 함수
+      const addCustomPreset = (step, text) => {
+        const clean = text.trim();
+        if (!clean) return;
+
+        // 표준 PRESETS에 이미 있는 문구인지 확인
+        const standardList = PRESETS[step] || [];
+        const isStandard = standardList.some(std => {
+          const cleanStd = std.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
+          return cleanStd === clean || std === clean;
+        });
+        if (isStandard) return;
+
+        setCustomPresets(prev => {
+          const currentList = prev[step] || [];
+          if (currentList.includes(clean)) return prev;
+          const updated = { ...prev, [step]: [...currentList, clean] };
+          try {
+            const userKey = nickname || 'default';
+            localStorage.setItem('mind_custom_presets_' + userKey, JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      };
+
+      // 맞춤 답변 삭제 함수
+      const removeCustomPreset = (step, textToRemove, e) => {
+        if (e) e.stopPropagation();
+        if (!confirm(`'${textToRemove}' 항목을 내 맞춤 목록에서 삭제하시겠습니까?`)) return;
+
+        setCustomPresets(prev => {
+          const currentList = prev[step] || [];
+          const updated = { ...prev, [step]: currentList.filter(item => item !== textToRemove) };
+          try {
+            const userKey = nickname || 'default';
+            localStorage.setItem('mind_custom_presets_' + userKey, JSON.stringify(updated));
+          } catch (err) {}
+          return updated;
+        });
+
+        // 현재 선택되어 있다면 선택 해제
+        if (selectedAnswers[step] === textToRemove) {
+          setSelectedAnswers(prev => {
+            const copy = { ...prev };
+            delete copy[step];
+            return copy;
+          });
+        }
+      };
+
       // 실시간 데이터 구독 (Firestore 연동 시 내담자 본인의 기록 실시간 동기화)
       useEffect(() => {
         const unsubscribe = MindDB.subscribe((saved) => {
@@ -239,28 +357,33 @@
       };
 
       const handleNext = () => {
-        if (!selectedAnswers[currentStep] && !customInput.trim()) {
+        const trimmedCustom = customInput.trim();
+        if (!selectedAnswers[currentStep] && !trimmedCustom) {
           alert("마음에 드는 항목을 하나 콕 눌러주시거나, 아래에 적어주세요 😊");
           return;
         }
-        if (customInput.trim()) {
-          setSelectedAnswers(prev => ({ ...prev, [currentStep]: customInput.trim() }));
+
+        let updatedAnswers = { ...selectedAnswers };
+        if (trimmedCustom) {
+          updatedAnswers[currentStep] = trimmedCustom;
+          setSelectedAnswers(updatedAnswers);
+          addCustomPreset(currentStep, trimmedCustom);
           setCustomInput('');
         }
 
         if (currentStep < 8) {
           setCurrentStep(prev => prev + 1);
         } else {
-          saveChain();
+          saveChain(updatedAnswers);
         }
       };
 
       // 8단계 설문 저장 핸들러 (정확한 일시 포맷 기록 및 클라우드 영구 저장)
-      const saveChain = async () => {
+      const saveChain = async (finalAnswers = selectedAnswers) => {
         const types = ['컨디션', '계기', '생각', '감정', '몸느낌', '행동', '결과', '긍정대처'];
         const newSeq = types.map((typeName, idx) => ({
           type: typeName,
-          label: (selectedAnswers[idx + 1] || customInput).replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim()
+          label: (finalAnswers[idx + 1] || '').replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim()
         }));
 
         const now = new Date();
@@ -426,6 +549,64 @@
                     </p>
                   </div>
 
+                  {/* 이전에 직접 적으셨던 맞춤 답변이 있을 경우 상단에 우선 노출 */}
+                  {customPresets[currentStep] && customPresets[currentStep].length > 0 && (
+                    <div className="mb-5 p-4 rounded-2xl bg-amber-100/70 border-2 border-amber-300 shadow-sm animate-fadeIn">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-1.5 font-extrabold text-amber-950 text-base">
+                          <span className="text-xl">⭐</span>
+                          <span>{nickname ? `${nickname}님이 이전에 직접 적으셨던 답변` : '이전에 직접 적으셨던 맞춤 답변'}</span>
+                        </div>
+                        <span className="text-xs font-bold text-amber-800 bg-amber-200/90 px-2.5 py-1 rounded-full">
+                          나만의 표현
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 gap-2.5">
+                        {customPresets[currentStep].map((opt, i) => {
+                          const isSelected = selectedAnswers[currentStep] === opt;
+                          return (
+                            <div
+                              key={`custom-${i}`}
+                              onClick={() => handleSelectOption(opt)}
+                              className={`w-full min-h-[60px] py-3.5 px-4 rounded-2xl text-left font-bold text-lg border-2 touch-btn flex items-center justify-between cursor-pointer transition-all ${
+                                isSelected
+                                  ? (currentStep === 8 
+                                      ? 'bg-emerald-600 text-white border-emerald-700 shadow-md scale-[1.01]' 
+                                      : 'bg-amber-600 text-white border-amber-700 shadow-md scale-[1.01]')
+                                  : 'bg-white text-slate-800 border-amber-200 hover:border-amber-400 hover:bg-amber-50'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 pr-2 overflow-hidden">
+                                <span className="text-xl shrink-0">✍️</span>
+                                <span className="break-words leading-snug">{opt}</span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {isSelected && <span className="text-2xl">✔️</span>}
+                                <button
+                                  type="button"
+                                  onClick={(e) => removeCustomPreset(currentStep, opt, e)}
+                                  title="이 맞춤 답변 삭제"
+                                  className={`p-1.5 rounded-lg text-sm touch-btn transition-colors ${
+                                    isSelected 
+                                      ? 'text-amber-200 hover:text-white hover:bg-amber-700/60' 
+                                      : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
+                                  }`}
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 자주 쓰는 기본 예시 헤더 */}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-slate-500">💡 자주 쓰는 기본 예시</span>
+                  </div>
+
                   <div className="grid grid-cols-1 gap-3 mb-5">
                     {PRESETS[currentStep]?.map((opt, i) => {
                       const isSelected = selectedAnswers[currentStep] === opt;
@@ -450,7 +631,7 @@
 
                   <div className="mb-4">
                     <label className="block text-sm font-bold text-slate-600 mb-1.5">
-                      ✍️ 찾으시는 내용이 없나요? 편하게 적으셔도 됩니다:
+                      ✍️ 찾으시는 내용이 없나요? 편하게 적어주시면 다음에도 기억해 둘게요:
                     </label>
                     <input
                       type="text"

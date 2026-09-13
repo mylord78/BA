@@ -429,11 +429,30 @@
     },
 
     // 실시간 구독 (내담자 등록 시 상담자 화면에 실시간 자동 반영)
-    // filterNickname이 지정되면 해당 내담자의 설문만 필터링 (내담자 개인정보 보호)
+    // filterNickname이 지정되면 해당 내담자의 설문만 필터링 (내담자 개인정보 보호 & 번호 격리 지원)
     subscribe: (onUpdate, onError, filterNickname) => {
       if (!isFirestoreInitialized) {
         initFirestore();
       }
+
+      // 필터 판별 헬퍼 (식별 번호 접두사 'code:C01' 및 닉네임/코드 유연 매칭 지원)
+      const matchesFilter = (item, filter) => {
+        if (!filter) return true;
+        if (!item) return false;
+        const filterStr = String(filter).trim();
+        if (!filterStr) return true;
+
+        if (filterStr.startsWith('code:')) {
+          const targetCode = filterStr.slice(5).trim().toLowerCase();
+          const itemCode = item.clientCode ? String(item.clientCode).trim().toLowerCase() : '';
+          return itemCode === targetCode;
+        }
+
+        const target = filterStr.toLowerCase();
+        const itemNick = item.nickname ? String(item.nickname).trim().toLowerCase() : '';
+        const itemCode = item.clientCode ? String(item.clientCode).trim().toLowerCase() : '';
+        return itemNick === target || itemCode === target;
+      };
 
       if (isFirestoreInitialized && firestoreDb) {
         try {
@@ -443,7 +462,7 @@
             const list = [];
             snapshot.forEach(doc => {
               const data = doc.data();
-              if (!filterNickname || data.nickname === filterNickname) {
+              if (matchesFilter(data, filterNickname)) {
                 list.push(data);
               }
             });
@@ -460,7 +479,7 @@
 
       // 로컬 모드인 경우 1회 로드 후 빈 해제 함수 반환
       LocalDB.getAll().then(data => {
-        const filtered = filterNickname ? data.filter(d => d.nickname === filterNickname) : data;
+        const filtered = filterNickname ? data.filter(d => matchesFilter(d, filterNickname)) : data;
         if (onUpdate) onUpdate(filtered);
       });
       return () => {};

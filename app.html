@@ -260,8 +260,6 @@
       const [currentStep, setCurrentStep] = useState(1);
       const [selectedAnswers, setSelectedAnswers] = useState({});
       const [customInput, setCustomInput] = useState('');
-      const [chains, setChains] = useState(INITIAL_CHAINS);
-
       // 내담자 번호(clientCode) 및 닉네임 관리 (안전 폴백 내장)
       const [clientCode, setClientCode] = useState(() => {
         try {
@@ -281,6 +279,31 @@
       });
       const [inputNick, setInputNick] = useState(() => {
         try { return localStorage.getItem('mind_user_nickname') || ''; } catch (e) { return ''; }
+      });
+
+      // 내담자 기록 상태 (번호나 닉네임이 있는 실제 내담자의 경우 타인의 더미 데이터(INITIAL_CHAINS)를 절대 노출하지 않음)
+      const [chains, setChains] = useState(() => {
+        try {
+          const initCode = (window.MindDB && typeof window.MindDB.getClientCode === 'function')
+            ? (window.MindDB.getClientCode() || '')
+            : (localStorage.getItem('mind_user_client_code') || '');
+          const initNick = localStorage.getItem('mind_user_nickname') || '';
+          if (initCode || initNick) {
+            // 로컬 캐시된 백업이 있다면 내 것만 로드
+            const backupStr = localStorage.getItem('mind_surveys_backup');
+            if (backupStr) {
+              const list = JSON.parse(backupStr);
+              if (Array.isArray(list) && list.length > 0) {
+                const filtered = initCode
+                  ? list.filter(item => item.clientCode && item.clientCode.trim().toLowerCase() === initCode.trim().toLowerCase())
+                  : list.filter(item => item.nickname === initNick);
+                return filtered;
+              }
+            }
+            return []; // 실제 내담자는 빈 배열로 시작하고 실시간 DB를 동기화받음
+          }
+        } catch (e) {}
+        return INITIAL_CHAINS;
       });
 
       // 클라우드 DB 상태 및 설정 모달 (안전 폴백 내장)
@@ -428,14 +451,25 @@
       useEffect(() => {
         if (!window.MindDB || typeof window.MindDB.subscribe !== 'function') return;
         const unsubscribe = window.MindDB.subscribe((saved) => {
-          if (saved && saved.length > 0) {
+          if (saved) {
             // 내담자 번호가 있으면 번호로 엄격히 격리, 없을 때만 닉네임으로 필터링
             const myChains = clientCode
-              ? saved.filter(item => item.clientCode === clientCode)
+              ? saved.filter(item => item.clientCode && item.clientCode.trim().toLowerCase() === clientCode.trim().toLowerCase())
               : (nickname ? saved.filter(item => item.nickname === nickname) : saved);
-            setChains(myChains.length > 0 ? myChains : INITIAL_CHAINS);
+
+            // 실제 내담자인 경우(번호 또는 닉네임 존재) 본인의 실제 기록만 설정 (0건이면 0건)
+            if (clientCode || nickname) {
+              setChains(myChains);
+            } else {
+              setChains(myChains.length > 0 ? myChains : INITIAL_CHAINS);
+            }
           } else {
-            setChains(INITIAL_CHAINS);
+            // DB에 데이터가 없거나 0건인 경우
+            if (clientCode || nickname) {
+              setChains([]);
+            } else {
+              setChains(INITIAL_CHAINS);
+            }
           }
           if (window.MindDB && typeof window.MindDB.getStatus === 'function') {
             setDbStatus(window.MindDB.getStatus());
@@ -1128,6 +1162,28 @@
         }
       }, [isFullScreen, chains, viewType]);
 
+      if (!chains || chains.length === 0) {
+        return (
+          <div className="bg-white p-8 sm:p-12 rounded-3xl border-2 border-amber-300 shadow-sm text-center space-y-4 animate-fadeIn my-auto">
+            <div className="text-5xl">🌱</div>
+            <h3 className="text-xl font-black text-amber-950">아직 기록된 마음 여정이 없습니다</h3>
+            <p className="text-sm text-slate-600 leading-relaxed max-w-sm mx-auto">
+              선생님의 마음 상태와 긍정 대처를 첫 번째로 기록해 보세요.<br/>
+              기록이 쌓이면 나만의 마음 행동 지도와 맞춤 편지가 펼쳐집니다 😊
+            </p>
+            <div className="pt-2">
+              <button
+                onClick={onGoWizard}
+                className="px-6 py-3.5 bg-amber-600 hover:bg-amber-700 text-white font-black text-base rounded-2xl shadow-lg shadow-amber-600/30 touch-btn inline-flex items-center gap-2"
+              >
+                <span>✏️</span>
+                <span>첫 마음 기록 시작하기</span>
+              </button>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="flex flex-col h-full justify-between">
           <div>
@@ -1590,10 +1646,14 @@ ${sessionDetails}
         });
       };
 
-      if (!metrics) {
+      if (!metrics || metrics.totalChains === 0) {
         return (
-          <div className="p-8 text-center text-slate-500">
-            기록된 마음 데이터가 없습니다. 먼저 ✏️ 기록하기 탭에서 마음을 기록해 보세요.
+          <div className="bg-white p-8 sm:p-12 rounded-3xl border-2 border-amber-300 shadow-sm text-center space-y-4 animate-fadeIn my-auto">
+            <div className="text-5xl">💌</div>
+            <h3 className="text-xl font-black text-amber-950">아직 작성된 마음 분석 편지가 없습니다</h3>
+            <p className="text-sm text-slate-600 leading-relaxed max-w-sm mx-auto">
+              마음 기록을 남겨주시면, {userName}만을 위한 따뜻한 위로와 맞춤 심리 분석 편지가 정성껏 작성됩니다 😊
+            </p>
           </div>
         );
       }

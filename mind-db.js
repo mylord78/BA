@@ -529,6 +529,148 @@
       return true;
     },
 
+    // 기존 내담자에게 번호(clientCode) 새로 연결 또는 변경 (과거 모든 기록, 프로필, 메모 일괄 갱신)
+    updateClientCode: async (targetNickname, newCode, oldCode = '') => {
+      const cleanNick = (targetNickname || '').trim();
+      const cleanNewCode = (newCode || '').trim();
+      const cleanOldCode = (oldCode || '').trim();
+
+      if (!cleanNick) throw new Error("내담자 닉네임이 올바르지 않습니다.");
+      if (!cleanNewCode) throw new Error("연결할 새 식별 번호를 입력해주세요.");
+
+      const oldKey = cleanOldCode ? `[${cleanOldCode}] ${cleanNick}` : cleanNick;
+      const newKey = `[${cleanNewCode}] ${cleanNick}`;
+
+      let updatedCount = 0;
+
+      // 1. 로컬 저장소(IndexedDB & localStorage) 세션 기록 업데이트
+      try {
+        const localList = await LocalDB.getAll();
+        for (const item of localList) {
+          const itemNick = (item.nickname || '').trim();
+          const itemCode = (item.clientCode || '').trim();
+          const isMatch = (itemNick === cleanNick) && (cleanOldCode ? (itemCode === cleanOldCode) : (!itemCode || itemCode === ''));
+          if (isMatch) {
+            item.clientCode = cleanNewCode;
+            item.userKey = newKey;
+            await LocalDB.save(item);
+            updatedCount++;
+          }
+        }
+      } catch (e) {
+        console.warn("[MindDB] 로컬 DB 기록 갱신 오류:", e);
+      }
+
+      // 2. Firestore 클라우드 세션 기록 일괄 업데이트
+      if (!isFirestoreInitialized) initFirestore();
+      if (isFirestoreInitialized && firestoreDb) {
+        try {
+          const snap = await firestoreDb.collection(COLLECTION_NAME).where('nickname', '==', cleanNick).get();
+          const batch = firestoreDb.batch();
+          let batchCount = 0;
+
+          snap.forEach(doc => {
+            const data = doc.data();
+            const itemCode = (data.clientCode || '').trim();
+            const isMatch = cleanOldCode ? (itemCode === cleanOldCode) : (!itemCode || itemCode === '');
+            if (isMatch) {
+              batch.update(doc.ref, {
+                clientCode: cleanNewCode,
+                userKey: newKey
+              });
+              batchCount++;
+            }
+          });
+
+          if (batchCount > 0) {
+            await batch.commit();
+            console.log(`[MindDB] Firestore 설문 기록 ${batchCount}건에 번호 [${cleanNewCode}]가 연결되었습니다.`);
+            updatedCount = Math.max(updatedCount, batchCount);
+          }
+        } catch (e) {
+          console.warn("[MindDB] Firestore 설문 기록 갱신 실패:", e);
+        }
+
+        // 3. 프로필(COLLECTION_PROFILES) 업데이트/마이그레이션
+        try {
+          let profileData = null;
+          const oldDocRef = firestoreDb.collection(COLLECTION_PROFILES).doc(oldKey);
+          const oldDoc = await oldDocRef.get();
+          if (oldDoc.exists) {
+            profileData = oldDoc.data();
+          } else if (cleanOldCode === '') {
+            const nickDocRef = firestoreDb.collection(COLLECTION_PROFILES).doc(cleanNick);
+            const nickDoc = await nickDocRef.get();
+            if (nickDoc.exists) profileData = nickDoc.data();
+          }
+
+          if (profileData) {
+            profileData.clientCode = cleanNewCode;
+            profileData.clientKey = newKey;
+            profileData.nickname = cleanNick;
+            await firestoreDb.collection(COLLECTION_PROFILES).doc(newKey).set(profileData);
+            if (oldKey !== newKey) {
+              try { await oldDocRef.delete(); } catch(e2) {}
+            }
+          }
+        } catch (e) {
+          console.warn("[MindDB] Firestore 프로필 갱신 실패:", e);
+        }
+
+        // 4. 임상 메모(COLLECTION_NOTES) 업데이트
+        try {
+          const targetKeys = Array.from(new Set([oldKey, cleanNick]));
+          const notesSnap = await firestoreDb.collection(COLLECTION_NOTES).where('clientKey', 'in', targetKeys).get();
+          if (!notesSnap.empty) {
+            const notesBatch = firestoreDb.batch();
+            notesSnap.forEach(doc => {
+              notesBatch.update(doc.ref, {
+                clientKey: newKey,
+                clientCode: cleanNewCode
+              });
+            });
+            await notesBatch.commit();
+            console.log(`[MindDB] Firestore 임상 메모 ${notesSnap.size}건이 새 번호 [${cleanNewCode}]로 연결되었습니다.`);
+          }
+        } catch (e) {
+          console.warn("[MindDB] Firestore 메모 갱신 실패:", e);
+        }
+      }
+
+      // 5. 로컬 프로필 및 메모 갱신
+      try {
+        const localProfiles = LocalProfiles.getAll();
+        const p = localProfiles[oldKey] || localProfiles[cleanNick];
+        if (p) {
+          p.clientCode = cleanNewCode;
+          p.clientKey = newKey;
+          p.nickname = cleanNick;
+          LocalProfiles.save(p);
+        }
+
+        const allNotes = LocalNotes.getAll();
+        let notesChanged = false;
+        allNotes.forEach(n => {
+          if (n.clientKey === oldKey || n.clientKey === cleanNick) {
+            n.clientKey = newKey;
+            n.clientCode = cleanNewCode;
+            notesChanged = true;
+          }
+        });
+        if (notesChanged) {
+          localStorage.setItem(LOCAL_NOTES_KEY, JSON.stringify(allNotes));
+        }
+      } catch (e) {}
+
+      return {
+        success: true,
+        updatedCount,
+        newCode: cleanNewCode,
+        newKey,
+        oldKey
+      };
+    },
+
     // 기존 로컬 브라우저 데이터를 클라우드 DB로 마이그레이션(일괄 업로드)
     migrateLocalToFirebase: async () => {
       if (!isFirestoreInitialized && !initFirestore()) {

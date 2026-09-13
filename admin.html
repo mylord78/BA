@@ -16,9 +16,9 @@
   <!-- Firebase SDK (v10.8.0 Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <!-- Mind Lens Cloud DB Config & Adapter (v2.3 Cache-busting) -->
-  <script src="firebase-config.js?v=20260913_5"></script>
-  <script src="mind-db.js?v=20260913_5"></script>
+  <!-- Mind Lens Cloud DB Config & Adapter (v2.4 Cache-busting) -->
+  <script src="firebase-config.js?v=20260913_6"></script>
+  <script src="mind-db.js?v=20260913_6"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&display=swap');
     body {
@@ -672,6 +672,72 @@
         });
       };
 
+      // 기존 내담자에게 고유 식별 번호 연결 및 변경 핸들러 (과거 모든 기록 & 메모 일괄 갱신)
+      const handleAssignClientCode = async (targetClient) => {
+        if (!targetClient) return;
+        const currentNick = (targetClient.nickname || '').trim();
+        const currentCode = (targetClient.clientCode || '').trim();
+        const hasCode = !!currentCode;
+
+        const defaultCode = hasCode ? currentCode : nextAvailableClientCode;
+        const promptTitle = hasCode 
+          ? `[${currentCode}] ${currentNick} 님의 식별 번호를 변경합니다.\n새로 연결할 번호를 입력하세요:`
+          : `[미부여] '${currentNick}' 님에게 고유 번호를 새로 연결합니다.\n(기존에 사용되지 않은 추천 번호 [${nextAvailableClientCode}] 가 자동으로 채워졌습니다)\n\n※ 번호를 연결하면 이 내담자의 과거 모든 세션 기록과 상담자 메모가 새 번호로 안전하게 통합 갱신됩니다:`;
+
+        const codeInput = prompt(promptTitle, defaultCode);
+        if (codeInput === null) return;
+        const newCode = codeInput.trim();
+        if (!newCode) {
+          alert("식별 번호를 입력해주세요.");
+          return;
+        }
+
+        if (hasCode && newCode.toLowerCase() === currentCode.toLowerCase()) {
+          alert(`이미 [${currentCode}] 번호가 연결되어 있습니다.`);
+          return;
+        }
+
+        // 중복 검증: 다른 내담자가 이미 사용 중인지 확인
+        const duplicateOwner = clientList.find(c => 
+          c.clientCode && 
+          c.clientCode.toLowerCase() === newCode.toLowerCase() && 
+          c.key !== targetClient.key
+        );
+        if (duplicateOwner) {
+          const proceed = confirm(
+            `⚠️ [번호 중복 알림]\n\n입력하신 번호 [${newCode}]는 이미 다른 내담자 '${duplicateOwner.nickname}' 님이 사용 중입니다!\n\n이 번호로 계속 진행하시면 '${currentNick}' 님의 기록이 '${duplicateOwner.nickname}' 님의 기록과 하나로 합쳐져 관리됩니다.\n\n정말로 이 번호(${newCode})로 연결하시겠습니까?`
+          );
+          if (!proceed) return;
+        }
+
+        try {
+          setDbMessage(`[${newCode}] 번호로 ${currentNick} 님의 데이터를 연결하는 중...`);
+          if (window.MindDB && typeof window.MindDB.updateClientCode === 'function') {
+            const res = await window.MindDB.updateClientCode(currentNick, newCode, currentCode);
+            if (res.success) {
+              // 화면 갱신 및 선택 내담자 자동 전환
+              refreshData();
+              setSelectedClientKey(res.newKey);
+              setDbMessage(`✅ [${newCode}] 번호 연결 완료 (${res.updatedCount}건 갱신)`);
+
+              // 내담자 초대 링크 자동 생성 및 클립보드 복사
+              const clientUrl = (window.MindDB && typeof window.MindDB.generateClientInviteUrl === 'function')
+                ? window.MindDB.generateClientInviteUrl(newCode)
+                : `${window.location.origin}/app.html#code=${encodeURIComponent(newCode)}`;
+
+              navigator.clipboard.writeText(clientUrl).then(() => {
+                alert(`🎉 [${newCode}] 번호 연결이 성공적으로 완료되었습니다!\n\n- 대상: ${currentNick} 님 ➔ [${newCode}] ${currentNick} 님\n- 갱신된 과거 기록: 총 ${res.updatedCount}건\n\n📱 새 번호가 포함된 내담자 맞춤 링크가 클립보드에 자동 복사되었습니다:\n${clientUrl}\n\n내담자에게 이 링크를 전달하시면 다음 접속부터 해당 번호로 안전하게 연결됩니다 😊`);
+              }).catch(() => {
+                prompt(`🎉 [${newCode}] 번호 연결 완료! 아래 새 링크를 복사하여 내담자에게 전달하세요:`, clientUrl);
+              });
+            }
+          }
+        } catch (err) {
+          alert("번호 연결 중 오류가 발생했습니다: " + err.message);
+          setDbMessage("번호 연결 실패: " + err.message);
+        }
+      };
+
       // Firebase 설정 저장
       const handleSaveConfig = () => {
         try {
@@ -1318,6 +1384,18 @@ ${sessionDetails}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <button
+                          type="button"
+                          onClick={() => handleAssignClientCode(selectedClient)}
+                          className={`text-[10px] px-1.5 py-0.5 rounded font-bold touch-btn border ${
+                            selectedClientCode
+                              ? 'bg-slate-700 hover:bg-slate-600 text-slate-200 border-slate-600'
+                              : 'bg-amber-500 hover:bg-amber-400 text-amber-950 border-amber-400 animate-pulse font-black'
+                          }`}
+                          title={selectedClientCode ? "식별 번호 변경" : "이 내담자에게 번호 새로 연결"}
+                        >
+                          {selectedClientCode ? '✏️ 번호' : '+ 번호 연결'}
+                        </button>
+                        <button
                           onClick={() => handleCopyClientUrl(selectedClientCode)}
                           className="text-[10px] px-2 py-0.5 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 rounded border border-indigo-700 font-bold touch-btn"
                           title="이 내담자 번호가 포함된 전용 초대 링크 복사"
@@ -1737,13 +1815,34 @@ ${sessionDetails}
                                 >
                                   <td className="py-2.5 px-3 whitespace-nowrap">
                                     {c.clientCode ? (
-                                      <span className="px-2 py-0.5 bg-indigo-900 border border-indigo-600 text-indigo-200 font-mono font-black text-xs rounded-md shadow-sm">
-                                        {c.clientCode}
-                                      </span>
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="px-2 py-0.5 bg-indigo-900 border border-indigo-600 text-indigo-200 font-mono font-black text-xs rounded-md shadow-sm">
+                                          {c.clientCode}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleAssignClientCode(c);
+                                          }}
+                                          className="text-[10px] px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 touch-btn"
+                                          title="식별 번호 변경"
+                                        >
+                                          ✏️ 변경
+                                        </button>
+                                      </div>
                                     ) : (
-                                      <span className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 text-slate-400 text-[10px] rounded">
-                                        미부여
-                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleAssignClientCode(c);
+                                        }}
+                                        className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-amber-950 font-black text-xs rounded-lg shadow-md touch-btn inline-flex items-center gap-1 animate-pulse"
+                                        title="기존 사용자에게 고유 식별 번호 새로 연결"
+                                      >
+                                        <span>+ 번호 연결</span>
+                                      </button>
                                     )}
                                   </td>
                                   <td className="py-2.5 px-3 font-bold text-white whitespace-nowrap">
@@ -1785,17 +1884,31 @@ ${sessionDetails}
                                     )}
                                   </td>
                                   <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleCopyClientUrl(c.clientCode);
-                                      }}
-                                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-750 text-indigo-200 border border-slate-700 rounded-lg text-[11px] font-bold touch-btn inline-flex items-center gap-1 shadow-sm"
-                                      title="이 내담자 번호가 포함된 초대 링크 복사"
-                                    >
-                                      <span>📱 링크</span>
-                                    </button>
+                                    <div className="inline-flex items-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleAssignClientCode(c);
+                                        }}
+                                        className="px-2.5 py-1 bg-indigo-950/80 hover:bg-indigo-900 text-indigo-200 border border-indigo-700 rounded-lg text-[11px] font-bold touch-btn inline-flex items-center gap-1 shadow-sm"
+                                        title={c.clientCode ? "식별 번호 변경/재지정" : "이 내담자에게 번호 새로 연결"}
+                                      >
+                                        <span>🏷️</span>
+                                        <span>{c.clientCode ? '번호 변경' : '번호 연결'}</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCopyClientUrl(c.clientCode);
+                                        }}
+                                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-750 text-indigo-200 border border-slate-700 rounded-lg text-[11px] font-bold touch-btn inline-flex items-center gap-1 shadow-sm"
+                                        title="이 내담자 번호가 포함된 초대 링크 복사"
+                                      >
+                                        <span>📱 링크</span>
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
                               );
@@ -1826,7 +1939,20 @@ ${sessionDetails}
                                 <strong className="text-indigo-400">{selectedDisplayName}</strong> 님 기본 정보
                               </h3>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleAssignClientCode(selectedClient)}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 touch-btn shadow-sm border ${
+                                  selectedClientCode
+                                    ? 'bg-indigo-950 hover:bg-indigo-900 text-indigo-200 border-indigo-700'
+                                    : 'bg-amber-500 hover:bg-amber-400 text-amber-950 border-amber-400 font-black animate-pulse'
+                                }`}
+                                title={selectedClientCode ? "식별 번호 변경/재지정" : "이 내담자에게 번호 새로 연결"}
+                              >
+                                <span>🏷️</span>
+                                <span>{selectedClientCode ? `[${selectedClientCode}] 번호 변경` : '+ 번호 연결'}</span>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleCopyClientUrl(selectedClientCode)}
@@ -1834,7 +1960,7 @@ ${sessionDetails}
                                 title="이 내담자 번호가 포함된 전용 초대 링크 복사"
                               >
                                 <span>📱</span>
-                                <span>{selectedClientCode ? `[${selectedClientCode}] 링크 복사` : '초대 링크 복사'}</span>
+                                <span>{selectedClientCode ? `[${selectedClientCode}] 링크` : '초대 링크'}</span>
                               </button>
                               <span className="px-2 py-0.5 bg-slate-800 text-indigo-300 text-[11px] rounded-md font-mono border border-slate-700">
                                 비공개 보관

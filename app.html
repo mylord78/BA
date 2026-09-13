@@ -279,16 +279,6 @@
       const [showNicknameModal, setShowNicknameModal] = useState(() => {
         try { return !localStorage.getItem('mind_user_nickname'); } catch (e) { return true; }
       });
-      const [inputCode, setInputCode] = useState(() => {
-        try {
-          if (window.MindDB && typeof window.MindDB.getClientCode === 'function') {
-            return window.MindDB.getClientCode() || '';
-          }
-          return localStorage.getItem('mind_user_client_code') || '';
-        } catch (e) {
-          return '';
-        }
-      });
       const [inputNick, setInputNick] = useState(() => {
         try { return localStorage.getItem('mind_user_nickname') || ''; } catch (e) { return ''; }
       });
@@ -462,22 +452,15 @@
         };
       }, [clientCode, nickname]);
 
-      // 내담자 프로필(번호 및 닉네임) 저장 핸들러
-      const handleSaveProfile = (code, name) => {
-        const trimmedCode = (code !== undefined ? code : inputCode).trim();
+      // 내담자 닉네임 저장 핸들러 (내담자는 닉네임만 설정, 식별 번호는 상담사 부여 링크로 자동 각인된 코드 유지)
+      const handleSaveNickname = (name) => {
         const trimmedNick = (name !== undefined ? name : inputNick).trim();
         if (!trimmedNick) {
           alert("편하게 부르실 수 있는 닉네임을 적어주세요 😊");
           return;
         }
-        setClientCode(trimmedCode);
         setNickname(trimmedNick);
         try {
-          if (window.MindDB && typeof window.MindDB.saveClientCode === 'function') {
-            window.MindDB.saveClientCode(trimmedCode);
-          } else {
-            localStorage.setItem('mind_user_client_code', trimmedCode);
-          }
           localStorage.setItem('mind_user_nickname', trimmedNick);
         } catch (e) {}
         setShowNicknameModal(false);
@@ -621,12 +604,11 @@
 
                 <button
                   onClick={() => {
-                    setInputCode(clientCode);
                     setInputNick(nickname);
                     setShowNicknameModal(true);
                   }}
                   className="px-3 py-1 bg-amber-200 hover:bg-amber-300 text-amber-950 rounded-full text-xs font-extrabold flex items-center gap-1.5 shadow-sm touch-btn"
-                  title="내담자 번호 및 닉네임 설정"
+                  title="내 닉네임 설정"
                 >
                   <span>👤</span>
                   {clientCode && (
@@ -830,7 +812,7 @@
             )}
           </main>
 
-          {/* 내담자 번호 & 닉네임 설정 모달 */}
+          {/* 내담자 닉네임 설정 모달 (식별 번호 직접 입력 제거, 상담사 링크 각인 번호는 읽기 전용 뱃지 표시) */}
           {showNicknameModal && (
             <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
               <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border-4 border-amber-400 space-y-4">
@@ -838,41 +820,27 @@
                   <span className="text-4xl inline-block">🌻</span>
                   <h3 className="text-2xl font-black text-amber-950">마음 돋보기에 오신 것을 환영합니다</h3>
                   <p className="text-xs sm:text-sm font-medium text-slate-600 leading-relaxed">
-                    선생님의 번호와 닉네임으로 다른 분들과 헷갈리지 않게<br/>
-                    소중한 기록을 안전하게 보호하고 구분해 드립니다 😊
+                    선생님을 어떻게 불러드리면 좋을까요?<br/>
+                    한번 저장해 두시면 다음 접속부터는 다시 묻지 않습니다 😊
                   </p>
                 </div>
 
-                {/* 초대 링크에서 자동 감지된 번호가 있을 때 배너 */}
-                {inputCode && (
+                {/* 상담사 초대 링크에서 각인된 고유 번호가 있을 때 안내 뱃지 */}
+                {clientCode ? (
                   <div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-3 flex items-center gap-2.5">
-                    <span className="text-xl">🎫</span>
+                    <span className="text-2xl">🎫</span>
                     <div className="text-xs">
                       <div className="font-extrabold text-emerald-900">
-                        상담사 지정 내담자 번호: <span className="underline font-mono text-sm">[{inputCode}]</span>
+                        상담사 지정 식별 번호: <span className="font-mono text-sm px-2 py-0.5 bg-emerald-200 text-emerald-950 rounded-md font-black">[{clientCode}]</span>
                       </div>
-                      <div className="text-emerald-700 text-[11px]">
-                        초대 링크를 통해 고유 번호가 안전하게 연결되었습니다.
+                      <div className="text-emerald-700 text-[11px] mt-0.5">
+                        상담사 전용 링크로 안전하게 연결되어 기록이 보호됩니다.
                       </div>
                     </div>
                   </div>
-                )}
+                ) : null}
 
                 <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-bold text-amber-900 mb-1 flex items-center justify-between">
-                      <span>내담자 식별 번호 (상담사 부여 코드)</span>
-                      <span className="text-[10px] text-slate-400 font-normal">비어있어도 진행 가능</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={inputCode}
-                      onChange={(e) => setInputCode(e.target.value)}
-                      placeholder="예: C01, 101, B2-05..."
-                      className="w-full text-base font-mono font-bold border-2 border-amber-200 rounded-2xl p-3 focus:border-amber-600 focus:outline-none bg-amber-50/30"
-                    />
-                  </div>
-
                   <div>
                     <label className="block text-xs font-bold text-amber-900 mb-1">내 닉네임 (별명) *</label>
                     <input
@@ -880,9 +848,9 @@
                       value={inputNick}
                       onChange={(e) => setInputNick(e.target.value)}
                       placeholder="예: 행복한 해바라기, 맑은 하늘, 솔바람..."
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleSaveProfile(inputCode, inputNick); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleSaveNickname(inputNick); }}
                       className="w-full text-base border-2 border-amber-300 rounded-2xl p-3 focus:border-amber-600 focus:outline-none"
-                      autoFocus={!inputCode}
+                      autoFocus
                     />
                   </div>
 
@@ -915,7 +883,7 @@
                   )}
                   <button
                     type="button"
-                    onClick={() => handleSaveProfile(inputCode, inputNick)}
+                    onClick={() => handleSaveNickname(inputNick)}
                     className="flex-[2] py-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-2xl shadow-md text-base touch-btn"
                   >
                     마음 돋보기 시작하기 🚀

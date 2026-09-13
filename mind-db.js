@@ -360,8 +360,24 @@
     // 내담자 전용 번호 포함 접속 링크 생성 (스마트폰/원격 접속용)
     generateClientInviteUrl: (clientCode) => {
       const cfg = getEffectiveConfig();
-      const currentUrl = window.location.href.split('?')[0].split('#')[0];
-      const clientBaseUrl = currentUrl.replace(/admin\.html$/, 'app.html');
+      
+      let clientBaseUrl = '';
+      try {
+        const loc = window.location;
+        if (loc.protocol === 'file:') {
+          const clean = loc.href.split('?')[0].split('#')[0];
+          clientBaseUrl = clean.replace(/admin(\.html)?$/i, 'app.html');
+        } else {
+          // 웹 호스팅 환경: 도메인 origin과 path를 기반으로 항상 /app.html 정확히 생성
+          const origin = loc.origin || (loc.protocol + '//' + loc.host);
+          let pathname = loc.pathname || '';
+          let basePath = pathname.replace(/\/(admin|client|index|app)(\.html)?\/?$/i, '');
+          if (basePath.endsWith('/')) basePath = basePath.slice(0, -1);
+          clientBaseUrl = `${origin}${basePath}/app.html`;
+        }
+      } catch (e) {
+        clientBaseUrl = '/app.html';
+      }
       
       const parts = [];
       if (clientCode && String(clientCode).trim()) {

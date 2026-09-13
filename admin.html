@@ -16,9 +16,9 @@
   <!-- Firebase SDK (v10.8.0 Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <!-- Mind Lens Cloud DB Config & Adapter (v2.2 Cache-busting) -->
-  <script src="firebase-config.js?v=20260913_4"></script>
-  <script src="mind-db.js?v=20260913_4"></script>
+  <!-- Mind Lens Cloud DB Config & Adapter (v2.3 Cache-busting) -->
+  <script src="firebase-config.js?v=20260913_5"></script>
+  <script src="mind-db.js?v=20260913_5"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&display=swap');
     body {
@@ -233,7 +233,7 @@
         return code ? `[${code}] ${nick}` : nick;
       };
 
-      // 고유 내담자 목록 (번호+닉네임 단위로 완벽 분리 도출)
+      // 고유 내담자 목록 (번호+닉네임 단위로 완벽 분리 도출 및 통계 집계)
       const clientList = useMemo(() => {
         const map = new Map();
         records.forEach(r => {
@@ -245,12 +245,63 @@
               key,
               clientCode: code,
               nickname: nick,
-              displayName: key
+              displayName: key,
+              count: 1,
+              latestDate: r.date || '',
+              latestId: r.id
             });
+          } else {
+            const existing = map.get(key);
+            existing.count += 1;
+            if (r.id > existing.latestId) {
+              existing.latestId = r.id;
+              existing.latestDate = r.date || existing.latestDate;
+            }
           }
         });
         return Array.from(map.values());
       }, [records]);
+
+      // 기존에 이미 등록되어 사용 중인 모든 내담자 번호 목록
+      const usedClientCodes = useMemo(() => {
+        const set = new Set();
+        clientList.forEach(c => {
+          if (c.clientCode && c.clientCode.trim()) {
+            set.add(c.clientCode.trim());
+          }
+        });
+        return Array.from(set).sort();
+      }, [clientList]);
+
+      // 기존에 사용되지 않는 다음 신규 추천 번호 자동 계산 (예: C01, C02 -> C03)
+      const nextAvailableClientCode = useMemo(() => {
+        if (usedClientCodes.length === 0) return 'C01';
+
+        // C로 시작하고 숫자가 붙은 패턴 추출 (C01, C02, C1, C10...)
+        const cNumbers = [];
+        usedClientCodes.forEach(code => {
+          const match = code.match(/^C(\d+)$/i);
+          if (match) {
+            cNumbers.push(parseInt(match[1], 10));
+          }
+        });
+
+        if (cNumbers.length > 0) {
+          const maxNum = Math.max(...cNumbers);
+          const nextNum = maxNum + 1;
+          return `C${nextNum.toString().padStart(2, '0')}`;
+        }
+
+        // C 패턴이 아닌 순수 숫자 패턴인 경우
+        const pureNumbers = usedClientCodes
+          .map(c => parseInt(c, 10))
+          .filter(n => !isNaN(n));
+        if (pureNumbers.length > 0) {
+          return String(Math.max(...pureNumbers) + 1);
+        }
+
+        return `C${(usedClientCodes.length + 1).toString().padStart(2, '0')}`;
+      }, [usedClientCodes]);
 
       const [selectedClientKey, setSelectedClientKey] = useState('[C01] 해바라기');
       const [selectedSessionId, setSelectedSessionId] = useState(null);
@@ -559,15 +610,34 @@
         }
       };
 
-      // 내담자 전용 맞춤 번호 포함 초대 링크 복사
+      // 내담자 전용 맞춤 번호 포함 초대 링크 복사 (미사용 번호 자동 매핑 & 중복 발급 완벽 방지)
       const handleCopyClientUrl = (presetCode) => {
-        const defaultCode = (typeof presetCode === 'string' && presetCode)
-          ? presetCode 
-          : (selectedClientCode || 'C01');
-        const code = prompt("내담자에게 부여할 고유 식별 번호(코드)를 입력하세요:\n(예: C01, 101, B2-05 등. 번호가 포함된 전용 접속 링크가 생성됩니다)", defaultCode);
+        // 특정 내담자 번호가 지정되었는지 여부
+        const isSpecific = typeof presetCode === 'string' && presetCode.trim() !== '';
+        // 지정되지 않았으면 사용되지 않은 다음 신규 추천 번호(예: C04)를 자동 매핑!
+        const defaultCode = isSpecific ? presetCode.trim() : nextAvailableClientCode;
+
+        const usedListStr = usedClientCodes.length > 0 ? usedClientCodes.join(', ') : '없음';
+        const promptMsg = isSpecific
+          ? `[${selectedDisplayName}] 내담자의 초대 링크를 복사합니다.\n식별 번호를 확인하세요:`
+          : `새로운 내담자에게 부여할 고유 번호(식별 코드)를 입력하세요:\n(기존에 사용되지 않은 추천 번호 [${nextAvailableClientCode}] 가 자동으로 채워졌습니다)\n\n※ 현재 이미 등록된 번호 목록:\n[ ${usedListStr} ]`;
+
+        const code = prompt(promptMsg, defaultCode);
         if (code === null) return;
-        const trimmed = code.trim();
-        
+        let trimmed = code.trim();
+        if (!trimmed) trimmed = defaultCode;
+
+        // 중복 검증: 만약 입력한 번호가 이미 기존 내담자 목록에 존재하는 경우
+        const existing = clientList.find(c => c.clientCode && c.clientCode.toLowerCase() === trimmed.toLowerCase());
+        if (existing && (!isSpecific || existing.clientCode !== presetCode)) {
+          const proceed = confirm(
+            `⚠️ [식별 번호 중복 주의]\n\n입력하신 번호 [${trimmed}]는 이미 기존 내담자 '${existing.nickname}' 님이 사용 중인 번호입니다!\n\n동일한 번호로 새 링크를 발급하시면 두 내담자의 기록이 하나로 합쳐질 수 있습니다.\n\n정말로 이 번호(${trimmed})로 링크를 복사하시겠습니까?\n\n[확인] = 중복 번호(${trimmed}) 그대로 발급\n[취소] = 사용되지 않은 신규 번호(${nextAvailableClientCode})로 다시 선택`
+          );
+          if (!proceed) {
+            return handleCopyClientUrl(nextAvailableClientCode);
+          }
+        }
+
         let clientUrl = '';
         try {
           if (window.MindDB && typeof window.MindDB.generateClientInviteUrl === 'function') {
@@ -1121,14 +1191,17 @@ ${sessionDetails}
                 <span className="text-[11px] opacity-70">⚙️</span>
               </button>
 
-              {/* 내담자 원클릭 접속 링크 복사 버튼 */}
+              {/* 신규 내담자 원클릭 접속 링크 복사 버튼 (미사용 추천 번호 실시간 매핑) */}
               <button
-                onClick={handleCopyClientUrl}
-                className="px-3 py-2 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 border border-indigo-700 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm touch-btn"
-                title="스마트폰이나 다른 기기에서 접속할 수 있는 내담자 설문 링크를 복사합니다"
+                onClick={() => handleCopyClientUrl()}
+                className="px-3 py-2 bg-indigo-900/80 hover:bg-indigo-800 text-indigo-100 border border-indigo-600 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm touch-btn"
+                title={`사용되지 않은 다음 신규 추천 번호 [${nextAvailableClientCode}]로 내담자 초대 링크를 복사합니다`}
               >
                 <span>📱</span>
-                <span>내담자 링크 복사</span>
+                <span>신규 링크 복사</span>
+                <span className="px-1.5 py-0.5 bg-indigo-600 text-white rounded font-mono text-[11px] font-black tracking-wide">
+                  {nextAvailableClientCode}
+                </span>
               </button>
 
               <a
@@ -1186,10 +1259,11 @@ ${sessionDetails}
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleCopyClientUrl()}
-                      className="px-1.5 py-0.5 bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 border border-indigo-700 rounded text-[10px] font-bold touch-btn flex items-center gap-0.5"
-                      title="새 번호가 포함된 내담자 초대 링크 발급"
+                      className="px-2 py-0.5 bg-indigo-900/90 hover:bg-indigo-800 text-indigo-200 border border-indigo-600 rounded-md text-[10px] font-bold touch-btn flex items-center gap-1"
+                      title={`미사용 추천 번호 [${nextAvailableClientCode}]로 신규 링크 발급`}
                     >
-                      <span>+ 링크</span>
+                      <span>+ 새 링크</span>
+                      <span className="font-mono text-amber-300">[{nextAvailableClientCode}]</span>
                     </button>
                     <span className="px-1.5 py-0.5 bg-indigo-950 text-indigo-300 border border-indigo-800 rounded text-[10px] font-bold">
                       총 {clientList.length}명
@@ -1217,23 +1291,28 @@ ${sessionDetails}
                       if (p && p.age) meta.push(`${p.age}세`);
                       if (p && p.gender && p.gender !== '미지정') meta.push(p.gender);
                       const metaStr = meta.length > 0 ? ` [${meta.join('/')}]` : '';
+                      const codeTag = c.clientCode ? `[${c.clientCode}]` : `[미부여]`;
                       return (
-                        <option key={c.key} value={c.key}>👤 {c.displayName}{metaStr} ({count}회기 기록)</option>
+                        <option key={c.key} value={c.key}>🎫 {codeTag} {c.nickname}{metaStr} ({count}회기)</option>
                       );
                     })}
                   </select>
                 )}
 
                 {selectedClientKey && (
-                  <div className="mt-2.5 p-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-xs space-y-1.5">
+                  <div className="mt-2.5 p-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-xs space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        {selectedClientCode && (
-                          <span className="px-1.5 py-0.5 bg-indigo-900 border border-indigo-700 text-indigo-200 text-[10px] font-black rounded-md shrink-0">
+                        {selectedClientCode ? (
+                          <span className="px-2 py-0.5 bg-indigo-900 border border-indigo-600 text-indigo-200 text-xs font-mono font-black rounded-md shrink-0">
                             {selectedClientCode}
                           </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 text-slate-400 text-[10px] rounded shrink-0">
+                            미부여
+                          </span>
                         )}
-                        <span className="font-bold text-indigo-300 truncate">
+                        <span className="font-bold text-indigo-200 truncate">
                           {selectedNickname} {profiles[selectedClientKey]?.age ? `(${profiles[selectedClientKey].age}세` : ''}{profiles[selectedClientKey]?.gender && profiles[selectedClientKey].gender !== '미지정' ? `/${profiles[selectedClientKey].gender})` : (profiles[selectedClientKey]?.age ? ')' : '')}
                         </span>
                       </div>
@@ -1254,6 +1333,22 @@ ${sessionDetails}
                           <span className="font-mono">{notes.length}</span>
                         </button>
                       </div>
+                    </div>
+
+                    {/* 추천 다음 번호 발급 안내 미니 바 */}
+                    <div className="p-2 bg-slate-900/90 border border-slate-700/80 rounded-lg flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400 flex items-center gap-1">
+                        <span>✨</span>
+                        <span>다음 추천 번호:</span>
+                        <strong className="text-amber-300 font-mono font-black">{nextAvailableClientCode}</strong>
+                      </span>
+                      <button
+                        onClick={() => handleCopyClientUrl()}
+                        className="text-[10px] px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded font-bold touch-btn shadow-sm"
+                        title={`새 번호 [${nextAvailableClientCode}] 초대 링크 발급`}
+                      >
+                        + 새 발급
+                      </button>
                     </div>
                     {profiles[selectedClientKey]?.primaryConcern ? (
                       <div className="text-[11px] text-slate-400 truncate">
@@ -1570,6 +1665,145 @@ ${sessionDetails}
                         <span className="text-amber-300 font-bold"> 내담자용 모바일/웹 앱(app.html)에는 일절 노출되지 않습니다.</span>
                       </span>
                     </div>
+                  </div>
+
+                  {/* 내담자 식별 번호 관리 및 중복 방지 모니터 테이블 */}
+                  <div className="p-5 bg-slate-900 rounded-3xl border border-slate-800 shadow-xl space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-2xl">🎫</span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-base font-black text-white">내담자 식별 번호 목록 & 중복 방지 현황</h3>
+                            <span className="px-2 py-0.5 bg-emerald-950/80 text-emerald-300 border border-emerald-700 rounded-md text-[11px] font-bold">
+                              총 {clientList.length}명 등록
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400">
+                            부여된 식별 번호로 동일 닉네임이 있어도 개별 내담자로 완벽히 격리·보호됩니다.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* 다음 추천 미사용 번호 발급 버튼 */}
+                      <div className="flex items-center gap-2.5 self-end sm:self-auto">
+                        <div className="text-right hidden sm:block">
+                          <span className="text-[10px] text-slate-400 block">사용 가능한 다음 추천 번호</span>
+                          <span className="text-xs font-mono font-black text-amber-300">[{nextAvailableClientCode}]</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyClientUrl()}
+                          className="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-extrabold text-xs rounded-xl shadow-md touch-btn flex items-center gap-1.5"
+                          title={`사용되지 않은 추천 번호 [${nextAvailableClientCode}]로 신규 초대 링크를 발급합니다`}
+                        >
+                          <span>➕</span>
+                          <span>새 번호({nextAvailableClientCode}) 초대 링크 발급</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 내담자 번호 목록 테이블 */}
+                    {clientList.length === 0 ? (
+                      <div className="p-6 text-center text-xs text-slate-500">등록된 내담자가 없습니다.</div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="border-b border-slate-800 text-slate-400 font-bold text-[11px]">
+                              <th className="py-2.5 px-3">식별 번호</th>
+                              <th className="py-2.5 px-3">내담자 닉네임</th>
+                              <th className="py-2.5 px-3">인적 사항</th>
+                              <th className="py-2.5 px-3">누적 기록</th>
+                              <th className="py-2.5 px-3">최근 제출일</th>
+                              <th className="py-2.5 px-3">식별 상태</th>
+                              <th className="py-2.5 px-3 text-right">초대 링크 / 관리</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800/60">
+                            {clientList.map((c) => {
+                              const isSelected = c.key === selectedClientKey;
+                              const p = profiles[c.key];
+                              // 동일 닉네임이 여러 명 있는지 확인
+                              const sameNickCount = clientList.filter(other => other.nickname === c.nickname).length;
+
+                              return (
+                                <tr
+                                  key={c.key}
+                                  onClick={() => { setSelectedClientKey(c.key); setSelectedSessionId(null); }}
+                                  className={`cursor-pointer transition-colors ${
+                                    isSelected ? 'bg-indigo-950/50 hover:bg-indigo-950/70' : 'hover:bg-slate-800/40'
+                                  }`}
+                                >
+                                  <td className="py-2.5 px-3 whitespace-nowrap">
+                                    {c.clientCode ? (
+                                      <span className="px-2 py-0.5 bg-indigo-900 border border-indigo-600 text-indigo-200 font-mono font-black text-xs rounded-md shadow-sm">
+                                        {c.clientCode}
+                                      </span>
+                                    ) : (
+                                      <span className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 text-slate-400 text-[10px] rounded">
+                                        미부여
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="py-2.5 px-3 font-bold text-white whitespace-nowrap">
+                                    <div className="flex items-center gap-1.5">
+                                      <span>👤</span>
+                                      <span>{c.nickname}</span>
+                                      {isSelected && (
+                                        <span className="text-[10px] px-1.5 py-0.2 bg-amber-500/20 text-amber-300 rounded border border-amber-500/30">
+                                          선택됨
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-slate-400 whitespace-nowrap">
+                                    {p && (p.age || (p.gender && p.gender !== '미지정')) ? (
+                                      <span>
+                                        {p.age ? `${p.age}세` : ''}
+                                        {p.gender && p.gender !== '미지정' ? ` / ${p.gender}` : ''}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-600">-</span>
+                                    )}
+                                  </td>
+                                  <td className="py-2.5 px-3 font-mono text-indigo-300 font-bold whitespace-nowrap">
+                                    {c.count}회기
+                                  </td>
+                                  <td className="py-2.5 px-3 text-slate-400 text-[11px] whitespace-nowrap">
+                                    {c.latestDate || '-'}
+                                  </td>
+                                  <td className="py-2.5 px-3 whitespace-nowrap">
+                                    {sameNickCount > 1 ? (
+                                      <span className="text-[10px] px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-700 rounded-full font-bold">
+                                        🛡️ 번호로 분리 보호 (동명 {sameNickCount}명)
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] px-2 py-0.5 bg-slate-800 text-slate-300 rounded-full">
+                                        🟢 고유 식별
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCopyClientUrl(c.clientCode);
+                                      }}
+                                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-750 text-indigo-200 border border-slate-700 rounded-lg text-[11px] font-bold touch-btn inline-flex items-center gap-1 shadow-sm"
+                                      title="이 내담자 번호가 포함된 초대 링크 복사"
+                                    >
+                                      <span>📱 링크</span>
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
 
                   {!selectedClientKey ? (

@@ -368,12 +368,9 @@
           const clean = loc.href.split('?')[0].split('#')[0];
           clientBaseUrl = clean.replace(/admin(\.html)?$/i, 'app.html');
         } else {
-          // 웹 호스팅 환경: 도메인 origin과 path를 기반으로 항상 /app.html 정확히 생성
+          // 웹 호스팅 환경: 도메인 origin을 기준으로 항상 /app.html 직접 지정 (admin 등 경로 누출 원천 차단)
           const origin = loc.origin || (loc.protocol + '//' + loc.host);
-          let pathname = loc.pathname || '';
-          let basePath = pathname.replace(/\/(admin|client|index|app)(\.html)?\/?$/i, '');
-          if (basePath.endsWith('/')) basePath = basePath.slice(0, -1);
-          clientBaseUrl = `${origin}${basePath}/app.html`;
+          clientBaseUrl = `${origin}/app.html`;
         }
       } catch (e) {
         clientBaseUrl = '/app.html';

@@ -16,9 +16,9 @@
   <!-- Firebase SDK (v10.8.0 Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <!-- Mind Lens Cloud DB Config & Adapter -->
-  <script src="firebase-config.js"></script>
-  <script src="mind-db.js"></script>
+  <!-- Mind Lens Cloud DB Config & Adapter (v2.2 Cache-busting) -->
+  <script src="firebase-config.js?v=20260913_4"></script>
+  <script src="mind-db.js?v=20260913_4"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&display=swap');
     body {
@@ -567,7 +567,34 @@
         const code = prompt("내담자에게 부여할 고유 식별 번호(코드)를 입력하세요:\n(예: C01, 101, B2-05 등. 번호가 포함된 전용 접속 링크가 생성됩니다)", defaultCode);
         if (code === null) return;
         const trimmed = code.trim();
-        const clientUrl = MindDB.generateClientInviteUrl(trimmed);
+        
+        let clientUrl = '';
+        try {
+          if (window.MindDB && typeof window.MindDB.generateClientInviteUrl === 'function') {
+            clientUrl = window.MindDB.generateClientInviteUrl(trimmed);
+          }
+        } catch (e) {}
+
+        // 이중 안전 장치: URL에 /admin 이 포함되어 있거나 비어있는 경우 직접 안전하게 생성
+        const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
+        if (!clientUrl || clientUrl.includes('admin')) {
+          const cfg = (window.MindDB && window.MindDB.getStatus && window.MindDB.getStatus().isCloud) 
+            ? (window.FIREBASE_CONFIG || null) 
+            : null;
+          const parts = [];
+          if (trimmed) parts.push(`code=${encodeURIComponent(trimmed)}`);
+          if (cfg) {
+            try {
+              const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(cfg))));
+              parts.push(`cfg=${encodeURIComponent(encoded)}`);
+            } catch (e) {}
+          }
+          clientUrl = `${origin}/app.html${parts.length > 0 ? '#' + parts.join('&') : ''}`;
+        } else {
+          // 혹시라도 남아있을 수 있는 /admin, admin.html 문자열 철저히 치환
+          clientUrl = clientUrl.replace(/\/admin(\.html)?/i, '/app.html');
+        }
+
         navigator.clipboard.writeText(clientUrl).then(() => {
           alert(`📱 [${trimmed || '일반'}] 번호가 포함된 내담자 맞춤 링크가 클립보드에 복사되었습니다!\n\n${clientUrl}\n\n이 링크로 접속한 내담자는 해당 번호가 브라우저에 자동 각인되며, 동일한 닉네임이 있더라도 별개의 내담자로 완전히 구분되어 기록이 보호됩니다.`);
         }).catch(() => {
@@ -1949,7 +1976,12 @@ ${sessionDetails}
       );
     }
 
-    ReactDOM.render(<AdminApp />, document.getElementById('root'));
+    const rootElement = document.getElementById('root');
+    if (ReactDOM.createRoot) {
+      ReactDOM.createRoot(rootElement).render(<AdminApp />);
+    } else {
+      ReactDOM.render(<AdminApp />, rootElement);
+    }
   </script>
 </body>
 </html>

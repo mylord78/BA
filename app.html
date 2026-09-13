@@ -6,9 +6,9 @@
   <title>마음 돋보기 - 스트레스 행동 체인 & 마음 편지</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- React 18 & ReactDOM -->
-  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <!-- React 18 & ReactDOM (Production) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <!-- Babel -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <!-- D3.js v7 -->
@@ -16,9 +16,9 @@
   <!-- Firebase SDK (v10.8.0 Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <!-- Mind Lens Cloud DB Config & Adapter -->
-  <script src="firebase-config.js"></script>
-  <script src="mind-db.js"></script>
+  <!-- Mind Lens Cloud DB Config & Adapter (v2.2 Cache-busting) -->
+  <script src="firebase-config.js?v=20260913_4"></script>
+  <script src="mind-db.js?v=20260913_4"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&display=swap');
     body {
@@ -41,6 +41,12 @@
       animation: fadeIn 0.2s ease-out forwards;
     }
   </style>
+  <script>
+    // 전역 스크립트 에러 복구 핸들러
+    window.addEventListener('error', function (event) {
+      console.warn('[MindLens Guard] 스크립트 오류 감지 및 안전 복구 대기:', event.message);
+    });
+  </script>
 </head>
 <body class="bg-amber-50/40 min-h-screen">
   <div id="root"></div>
@@ -256,15 +262,46 @@
       const [customInput, setCustomInput] = useState('');
       const [chains, setChains] = useState(INITIAL_CHAINS);
 
-      // 내담자 번호(clientCode) 및 닉네임 관리
-      const [clientCode, setClientCode] = useState(() => MindDB.getClientCode() || '');
-      const [nickname, setNickname] = useState(() => localStorage.getItem('mind_user_nickname') || '');
-      const [showNicknameModal, setShowNicknameModal] = useState(() => !localStorage.getItem('mind_user_nickname'));
-      const [inputCode, setInputCode] = useState(() => MindDB.getClientCode() || '');
-      const [inputNick, setInputNick] = useState(() => localStorage.getItem('mind_user_nickname') || '');
+      // 내담자 번호(clientCode) 및 닉네임 관리 (안전 폴백 내장)
+      const [clientCode, setClientCode] = useState(() => {
+        try {
+          if (window.MindDB && typeof window.MindDB.getClientCode === 'function') {
+            return window.MindDB.getClientCode() || '';
+          }
+          return localStorage.getItem('mind_user_client_code') || '';
+        } catch (e) {
+          return '';
+        }
+      });
+      const [nickname, setNickname] = useState(() => {
+        try { return localStorage.getItem('mind_user_nickname') || ''; } catch (e) { return ''; }
+      });
+      const [showNicknameModal, setShowNicknameModal] = useState(() => {
+        try { return !localStorage.getItem('mind_user_nickname'); } catch (e) { return true; }
+      });
+      const [inputCode, setInputCode] = useState(() => {
+        try {
+          if (window.MindDB && typeof window.MindDB.getClientCode === 'function') {
+            return window.MindDB.getClientCode() || '';
+          }
+          return localStorage.getItem('mind_user_client_code') || '';
+        } catch (e) {
+          return '';
+        }
+      });
+      const [inputNick, setInputNick] = useState(() => {
+        try { return localStorage.getItem('mind_user_nickname') || ''; } catch (e) { return ''; }
+      });
 
-      // 클라우드 DB 상태 및 설정 모달
-      const [dbStatus, setDbStatus] = useState(() => MindDB.getStatus());
+      // 클라우드 DB 상태 및 설정 모달 (안전 폴백 내장)
+      const [dbStatus, setDbStatus] = useState(() => {
+        try {
+          if (window.MindDB && typeof window.MindDB.getStatus === 'function') {
+            return window.MindDB.getStatus();
+          }
+        } catch (e) {}
+        return { isCloud: false, label: '로컬 브라우저 저장소', detail: '' };
+      });
       const [showDbModal, setShowDbModal] = useState(false);
       const [configInput, setConfigInput] = useState('');
 
@@ -399,7 +436,8 @@
 
       // 실시간 데이터 구독 (Firestore 연동 시 내담자 본인의 기록 실시간 동기화 - 번호 우선 매칭)
       useEffect(() => {
-        const unsubscribe = MindDB.subscribe((saved) => {
+        if (!window.MindDB || typeof window.MindDB.subscribe !== 'function') return;
+        const unsubscribe = window.MindDB.subscribe((saved) => {
           if (saved && saved.length > 0) {
             // 내담자 번호가 있으면 번호로 엄격히 격리, 없을 때만 닉네임으로 필터링
             const myChains = clientCode
@@ -409,10 +447,14 @@
           } else {
             setChains(INITIAL_CHAINS);
           }
-          setDbStatus(MindDB.getStatus());
+          if (window.MindDB && typeof window.MindDB.getStatus === 'function') {
+            setDbStatus(window.MindDB.getStatus());
+          }
         }, (err) => {
           console.warn("DB 실시간 구독 에러:", err);
-          setDbStatus(MindDB.getStatus());
+          if (window.MindDB && typeof window.MindDB.getStatus === 'function') {
+            setDbStatus(window.MindDB.getStatus());
+          }
         }, clientCode ? `code:${clientCode}` : (nickname || null));
 
         return () => {
@@ -431,7 +473,11 @@
         setClientCode(trimmedCode);
         setNickname(trimmedNick);
         try {
-          MindDB.saveClientCode(trimmedCode);
+          if (window.MindDB && typeof window.MindDB.saveClientCode === 'function') {
+            window.MindDB.saveClientCode(trimmedCode);
+          } else {
+            localStorage.setItem('mind_user_client_code', trimmedCode);
+          }
           localStorage.setItem('mind_user_nickname', trimmedNick);
         } catch (e) {}
         setShowNicknameModal(false);
@@ -485,7 +531,14 @@
           sequence: newSeq
         };
 
-        const result = await MindDB.save(newEntry);
+        let result = { mode: 'local' };
+        try {
+          if (window.MindDB && typeof window.MindDB.save === 'function') {
+            result = await window.MindDB.save(newEntry);
+          }
+        } catch (e) {
+          console.warn("기록 저장 중 경고 (로컬 보관):", e);
+        }
         setChains(prev => [newEntry, ...prev.filter(item => item.id !== newEntry.id)]);
 
         const syncNotice = result.mode === 'firestore'
@@ -508,13 +561,15 @@
             alert("apiKey와 projectId는 필수 항목입니다.");
             return;
           }
-          const res = MindDB.saveConfig(parsed);
-          if (res.success) {
-            alert("Firebase 클라우드 DB가 성공적으로 연결되었습니다!");
-            setShowDbModal(false);
-            setDbStatus(MindDB.getStatus());
-          } else {
-            alert("Firebase 연결 실패: " + (res.error || '설정값을 확인하세요.'));
+          if (window.MindDB && typeof window.MindDB.saveConfig === 'function') {
+            const res = window.MindDB.saveConfig(parsed);
+            if (res.success) {
+              alert("Firebase 클라우드 DB가 성공적으로 연결되었습니다!");
+              setShowDbModal(false);
+              setDbStatus(window.MindDB.getStatus());
+            } else {
+              alert("Firebase 연결 실패: " + (res.error || '설정값을 확인하세요.'));
+            }
           }
         } catch (e) {
           alert("JSON 형식이 올바르지 않습니다.");
@@ -523,22 +578,23 @@
 
       const handleResetConfig = () => {
         if (confirm("Firebase 설정을 제거하고 로컬 브라우저 모드로 전환하시겠습니까?")) {
-          MindDB.resetConfig();
-          setDbStatus(MindDB.getStatus());
+          if (window.MindDB && typeof window.MindDB.resetConfig === 'function') {
+            window.MindDB.resetConfig();
+            setDbStatus(window.MindDB.getStatus());
+          }
           setShowDbModal(false);
         }
       };
 
       return (
-        <div className="max-w-2xl mx-auto min-h-screen flex flex-col bg-white shadow-2xl border-x border-amber-100 relative">
-          {/* 상단 헤더 */}
-          <header className="bg-amber-100/90 px-6 py-5 border-b border-amber-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-4xl">🌻</span>
+        <div className="max-w-xl mx-auto px-4 py-6 min-h-screen flex flex-col justify-between">
+          <header className="mb-4">
+            <div className="flex items-center justify-between bg-white/80 backdrop-blur-sm p-3.5 rounded-2xl shadow-sm border border-amber-200/60">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🌻</span>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-extrabold text-amber-950 tracking-tight">마음 돋보기</h1>
-                  <p className="text-sm sm:text-base font-semibold text-amber-800">스트레스 속 내 행동 & 긍정 대처 살피기</p>
+                  <h1 className="text-base font-black text-amber-950 tracking-tight leading-tight">마음 돋보기</h1>
+                  <span className="text-[11px] font-bold text-amber-800/80">내 마음 행동 활성화 체인</span>
                 </div>
               </div>
 
@@ -546,7 +602,9 @@
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => {
-                    const currentCfg = MindDB.getConfig();
+                    const currentCfg = (window.MindDB && typeof window.MindDB.getConfig === 'function')
+                      ? window.MindDB.getConfig()
+                      : null;
                     setConfigInput(currentCfg ? JSON.stringify(currentCfg, null, 2) : '');
                     setShowDbModal(true);
                   }}
@@ -1642,7 +1700,12 @@ ${sessionDetails}
       );
     }
 
-    ReactDOM.render(<App />, document.getElementById('root'));
+    const rootElement = document.getElementById('root');
+    if (ReactDOM.createRoot) {
+      ReactDOM.createRoot(rootElement).render(<App />);
+    } else {
+      ReactDOM.render(<App />, rootElement);
+    }
   </script>
 </body>
 </html>

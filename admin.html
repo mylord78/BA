@@ -345,11 +345,47 @@
       // 상담자 전용 비공개 내담자 프로필 & 메모 상태 (내담자 앱에 비노출, clientKey 단위 격리)
       const [profiles, setProfiles] = useState({});
       const [notes, setNotes] = useState([]);
+      const [profileCounselor, setProfileCounselor] = useState('');
       const [profileGender, setProfileGender] = useState('미지정');
       const [profileAge, setProfileAge] = useState('');
       const [profileIntakeDate, setProfileIntakeDate] = useState('');
       const [profileConcern, setProfileConcern] = useState('');
       const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+      // 담당 상담사 필터링 상태 (ALL: 전체보기, UNASSIGNED: 미배정, 그 외 상담사 이름)
+      const [counselorFilter, setCounselorFilter] = useState('ALL');
+      const [currentCounselorName, setCurrentCounselorName] = useState(() => {
+        try {
+          return localStorage.getItem('mind_current_counselor_name') || '';
+        } catch (e) {
+          return '';
+        }
+      });
+
+      // 전체 등록된 상담사 목록 도출 (중복 제거)
+      const allCounselors = useMemo(() => {
+        const set = new Set();
+        Object.values(profiles || {}).forEach(p => {
+          if (p && p.counselorName && p.counselorName.trim()) {
+            set.add(p.counselorName.trim());
+          }
+        });
+        if (currentCounselorName && currentCounselorName.trim()) {
+          set.add(currentCounselorName.trim());
+        }
+        return Array.from(set).sort();
+      }, [profiles, currentCounselorName]);
+
+      // 담당 상담사 필터가 적용된 내담자 목록
+      const filteredClientList = useMemo(() => {
+        if (!counselorFilter || counselorFilter === 'ALL') {
+          return clientList;
+        }
+        if (counselorFilter === 'UNASSIGNED') {
+          return clientList.filter(c => !profiles[c.key]?.counselorName);
+        }
+        return clientList.filter(c => profiles[c.key]?.counselorName === counselorFilter);
+      }, [clientList, counselorFilter, profiles]);
 
       // 새 임상 메모 입력 폼 상태
       const [noteCategory, setNoteCategory] = useState('임상관찰');
@@ -425,10 +461,11 @@
         });
       };
 
-      // 내담자 데이터 로드/갱신 시 개별 내담자 자동 선택 (철저한 1:1 개인별 분석 보장)
+      // 내담자 데이터 로드/갱신 및 필터 변경 시 개별 내담자 자동 선택 (철저한 1:1 개인별 분석 보장)
       useEffect(() => {
-        if (clientList.length > 0) {
-          const keys = clientList.map(c => c.key);
+        const targetList = filteredClientList.length > 0 ? filteredClientList : clientList;
+        if (targetList.length > 0) {
+          const keys = targetList.map(c => c.key);
           if (!selectedClientKey || selectedClientKey === 'ALL' || !keys.includes(selectedClientKey)) {
             setSelectedClientKey(keys[0]);
             setSelectedSessionId(null);
@@ -437,7 +474,7 @@
           setSelectedClientKey('');
           setSelectedSessionId(null);
         }
-      }, [clientList]);
+      }, [filteredClientList, clientList]);
 
       // 1. 상담자 전용 내담자 프로필 실시간 구독
       useEffect(() => {
@@ -453,6 +490,7 @@
       useEffect(() => {
         if (!selectedClientKey) {
           setNotes([]);
+          setProfileCounselor('');
           setProfileGender('미지정');
           setProfileAge('');
           setProfileIntakeDate('');
@@ -462,6 +500,7 @@
 
         const p = profiles[selectedClientKey];
         if (p) {
+          setProfileCounselor(p.counselorName || '');
           setProfileGender(p.gender || '미지정');
           setProfileAge(p.age || '');
           setProfileIntakeDate(p.intakeDate || '');
@@ -469,11 +508,13 @@
         } else {
           MindDB.Profile.get(selectedClientKey).then(fetched => {
             if (fetched) {
+              setProfileCounselor(fetched.counselorName || '');
               setProfileGender(fetched.gender || '미지정');
               setProfileAge(fetched.age || '');
               setProfileIntakeDate(fetched.intakeDate || '');
               setProfileConcern(fetched.primaryConcern || '');
             } else {
+              setProfileCounselor('');
               setProfileGender('미지정');
               setProfileAge('');
               setProfileIntakeDate(new Date().toLocaleDateString('ko-KR'));
@@ -491,7 +532,7 @@
         };
       }, [selectedClientKey, profiles]);
 
-      // 내담자 기본정보 (성별, 나이 등) 저장 핸들러
+      // 내담자 기본정보 (성별, 나이, 담당 상담사 등) 저장 핸들러
       const handleSaveProfile = async (e) => {
         if (e) e.preventDefault();
         if (!selectedClientKey) {
@@ -500,10 +541,14 @@
         }
         setIsSavingProfile(true);
         try {
+          const counselorTrimmed = (profileCounselor || '').trim();
+          const existing = profiles[selectedClientKey] || {};
           const updated = {
+            ...existing,
             clientKey: selectedClientKey,
             clientCode: selectedClientCode,
             nickname: selectedNickname,
+            counselorName: counselorTrimmed,
             gender: profileGender,
             age: profileAge ? Number(profileAge) : '',
             intakeDate: profileIntakeDate || new Date().toLocaleDateString('ko-KR'),
@@ -512,6 +557,12 @@
           };
           await MindDB.Profile.save(updated);
           setProfiles(prev => ({ ...prev, [selectedClientKey]: updated }));
+
+          if (counselorTrimmed) {
+            setCurrentCounselorName(counselorTrimmed);
+            try { localStorage.setItem('mind_current_counselor_name', counselorTrimmed); } catch (err) {}
+          }
+
           alert(`[${selectedDisplayName}] 님의 기본 정보가 클라우드 DB에 안전하게 저장되었습니다.\n(내담자 앱에는 노출되지 않는 비밀 정보입니다)`);
         } finally {
           setIsSavingProfile(false);
@@ -735,6 +786,52 @@
         } catch (err) {
           alert("번호 연결 중 오류가 발생했습니다: " + err.message);
           setDbMessage("번호 연결 실패: " + err.message);
+        }
+      };
+
+      // 내담자에게 담당 상담사 지정/변경 핸들러
+      const handleAssignCounselor = async (targetClient, directName) => {
+        if (!targetClient) return;
+        const key = targetClient.key;
+        const currentCounselor = profiles[key]?.counselorName || '';
+
+        let newCounselor = directName;
+        if (newCounselor === undefined) {
+          const suggestion = allCounselors.length > 0 ? `\n\n※ 현재 등록된 상담사: [ ${allCounselors.join(', ')} ]` : '';
+          const input = prompt(
+            `[${targetClient.displayName}] 내담자의 담당 상담사를 지정하세요.\n(상담사 성함을 입력하거나, 비워두면 배정이 해제됩니다)${suggestion}`,
+            currentCounselor || currentCounselorName || ''
+          );
+          if (input === null) return;
+          newCounselor = input.trim();
+        }
+
+        try {
+          const existingProfile = profiles[key] || {};
+          const updated = {
+            ...existingProfile,
+            clientKey: key,
+            clientCode: targetClient.clientCode || existingProfile.clientCode || '',
+            nickname: targetClient.nickname || existingProfile.nickname || '',
+            counselorName: newCounselor,
+            updatedAt: new Date().toISOString()
+          };
+
+          await MindDB.Profile.save(updated);
+          setProfiles(prev => ({ ...prev, [key]: updated }));
+
+          // 선택된 상담사 이름 기억
+          if (newCounselor) {
+            setCurrentCounselorName(newCounselor);
+            try { localStorage.setItem('mind_current_counselor_name', newCounselor); } catch(e) {}
+          }
+
+          const msg = newCounselor 
+            ? `✅ [${targetClient.displayName}] 내담자의 담당 상담사가 '${newCounselor}' 선생님으로 지정되었습니다.`
+            : `ℹ️ [${targetClient.displayName}] 내담자의 담당 상담사 지정이 해제되었습니다.`;
+          alert(msg);
+        } catch (err) {
+          alert("상담사 지정 중 오류가 발생했습니다: " + err.message);
         }
       };
 
@@ -1301,6 +1398,33 @@ ${sessionDetails}
                 <span>{apiKey ? 'AI 키 연동됨 (전체 공유)' : 'AI 키 등록'}</span>
               </button>
 
+              {/* 🧑‍⚕️ 담당 상담사 상단 전역 필터 */}
+              <div className="flex items-center gap-1.5 bg-slate-800/90 border border-slate-700 px-3 py-1.5 rounded-xl text-xs shadow-sm">
+                <span className="text-sm">🧑‍⚕️</span>
+                <span className="text-slate-400 font-bold hidden xl:inline">담당 상담사:</span>
+                <select
+                  value={counselorFilter}
+                  onChange={(e) => setCounselorFilter(e.target.value)}
+                  className="bg-transparent text-indigo-200 font-bold focus:outline-none cursor-pointer text-xs"
+                  title="선택한 상담사가 담당하는 내담자만 필터링합니다"
+                >
+                  <option value="ALL" className="bg-slate-900 text-white">전체 내담자 ({clientList.length}명)</option>
+                  {currentCounselorName && (
+                    <option value={currentCounselorName} className="bg-slate-900 text-amber-300 font-bold">
+                      ⭐ 내 내담자 ({clientList.filter(c => profiles[c.key]?.counselorName === currentCounselorName).length}명)
+                    </option>
+                  )}
+                  {allCounselors.map(name => (
+                    <option key={name} value={name} className="bg-slate-900 text-white">
+                      🧑‍⚕️ {name} ({clientList.filter(c => profiles[c.key]?.counselorName === name).length}명)
+                    </option>
+                  ))}
+                  <option value="UNASSIGNED" className="bg-slate-900 text-slate-400">
+                    ⚠️ 미배정 ({clientList.filter(c => !profiles[c.key]?.counselorName).length}명)
+                  </option>
+                </select>
+              </div>
+
               {/* 🔒 화면 잠금(로그아웃) 버튼 */}
               <button
                 onClick={handleLogout}
@@ -1332,14 +1456,44 @@ ${sessionDetails}
                       <span className="font-mono text-amber-300">[{nextAvailableClientCode}]</span>
                     </button>
                     <span className="px-1.5 py-0.5 bg-indigo-950 text-indigo-300 border border-indigo-800 rounded text-[10px] font-bold">
-                      총 {clientList.length}명
+                      {filteredClientList.length}/{clientList.length}명
                     </span>
                   </div>
                 </div>
 
-                {clientList.length === 0 ? (
+                {/* 🧑‍⚕️ 담당 상담사 필터 */}
+                <div className="mb-2.5">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 mb-1">
+                    <span>담당 상담사 필터</span>
+                    {counselorFilter !== 'ALL' && (
+                      <button
+                        type="button"
+                        onClick={() => setCounselorFilter('ALL')}
+                        className="text-[10px] text-amber-400 hover:text-amber-300 font-bold"
+                      >
+                        전체보기 초기화
+                      </button>
+                    )}
+                  </div>
+                  <select
+                    value={counselorFilter}
+                    onChange={(e) => setCounselorFilter(e.target.value)}
+                    className="w-full bg-slate-800/90 border border-slate-700 rounded-xl p-2 text-xs font-bold text-indigo-200 focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="ALL">전체 내담자 ({clientList.length}명)</option>
+                    {currentCounselorName && (
+                      <option value={currentCounselorName}>⭐ 내 내담자 ({clientList.filter(c => profiles[c.key]?.counselorName === currentCounselorName).length}명)</option>
+                    )}
+                    {allCounselors.map(name => (
+                      <option key={name} value={name}>🧑‍⚕️ {name} ({clientList.filter(c => profiles[c.key]?.counselorName === name).length}명)</option>
+                    ))}
+                    <option value="UNASSIGNED">⚠️ 미배정 내담자 ({clientList.filter(c => !profiles[c.key]?.counselorName).length}명)</option>
+                  </select>
+                </div>
+
+                {filteredClientList.length === 0 ? (
                   <div className="p-3 bg-slate-800/60 border border-slate-700 rounded-xl text-center text-xs text-slate-400">
-                    수신된 내담자 기록이 없습니다.
+                    선택한 상담사의 내담자가 없습니다.
                   </div>
                 ) : (
                   <select
@@ -1350,10 +1504,11 @@ ${sessionDetails}
                     }}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs sm:text-sm font-bold text-white focus:outline-none focus:border-indigo-500 shadow-sm"
                   >
-                    {clientList.map(c => {
+                    {filteredClientList.map(c => {
                       const count = records.filter(r => getClientKey(r) === c.key).length;
                       const p = profiles[c.key];
                       const meta = [];
+                      if (p && p.counselorName) meta.push(`🧑‍⚕️${p.counselorName}`);
                       if (p && p.age) meta.push(`${p.age}세`);
                       if (p && p.gender && p.gender !== '미지정') meta.push(p.gender);
                       const metaStr = meta.length > 0 ? ` [${meta.join('/')}]` : '';
@@ -1411,6 +1566,28 @@ ${sessionDetails}
                           <span className="font-mono">{notes.length}</span>
                         </button>
                       </div>
+                    </div>
+
+                    {/* 🧑‍⚕️ 담당 상담사 표시 및 빠른 지정 바 */}
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-700/60 text-[11px]">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <span className="text-slate-400 shrink-0">담당:</span>
+                        {profiles[selectedClientKey]?.counselorName ? (
+                          <span className="px-1.5 py-0.5 bg-indigo-950 text-indigo-300 border border-indigo-700 rounded font-bold truncate">
+                            🧑‍⚕️ {profiles[selectedClientKey].counselorName}
+                          </span>
+                        ) : (
+                          <span className="text-amber-400/90 font-medium">미배정</span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleAssignCounselor(selectedClient)}
+                        className="text-[10px] px-1.5 py-0.5 bg-slate-700 hover:bg-slate-650 text-amber-300 rounded font-bold shrink-0 ml-1 touch-btn"
+                        title="담당 상담사 지정 또는 변경"
+                      >
+                        {profiles[selectedClientKey]?.counselorName ? '✏️ 변경' : '+ 상담사 지정'}
+                      </button>
                     </div>
 
                     {/* 추천 다음 번호 발급 안내 미니 바 */}
@@ -1781,9 +1958,79 @@ ${sessionDetails}
                       </div>
                     </div>
 
+                    {/* 🧑‍⚕️ 담당 상담사 빠른 필터 칩 바 */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-xs font-bold text-slate-400 mr-1 flex items-center gap-1">
+                        <span>🧑‍⚕️</span>
+                        <span>담당 상담사 필터:</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCounselorFilter('ALL')}
+                        className={`text-xs px-2.5 py-1 rounded-xl font-bold transition-all ${
+                          counselorFilter === 'ALL'
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+                        }`}
+                      >
+                        전체 ({clientList.length})
+                      </button>
+                      {currentCounselorName && (
+                        <button
+                          type="button"
+                          onClick={() => setCounselorFilter(currentCounselorName)}
+                          className={`text-xs px-2.5 py-1 rounded-xl font-bold transition-all flex items-center gap-1 ${
+                            counselorFilter === currentCounselorName
+                              ? 'bg-amber-600 text-white shadow-md'
+                              : 'bg-slate-800 text-amber-300 hover:bg-slate-750 border border-amber-700/60'
+                          }`}
+                        >
+                          <span>⭐ 내 내담자</span>
+                          <span>({clientList.filter(c => profiles[c.key]?.counselorName === currentCounselorName).length})</span>
+                        </button>
+                      )}
+                      {allCounselors.map(name => (
+                        <button
+                          key={name}
+                          type="button"
+                          onClick={() => setCounselorFilter(name)}
+                          className={`text-xs px-2.5 py-1 rounded-xl font-bold transition-all ${
+                            counselorFilter === name
+                              ? 'bg-indigo-600 text-white shadow-md'
+                              : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
+                          }`}
+                        >
+                          🧑‍⚕️ {name} ({clientList.filter(c => profiles[c.key]?.counselorName === name).length})
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setCounselorFilter('UNASSIGNED')}
+                        className={`text-xs px-2.5 py-1 rounded-xl font-bold transition-all ${
+                          counselorFilter === 'UNASSIGNED'
+                            ? 'bg-rose-900/90 text-rose-200 border border-rose-600 shadow-md'
+                            : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+                        }`}
+                      >
+                        ⚠️ 미배정 ({clientList.filter(c => !profiles[c.key]?.counselorName).length})
+                      </button>
+                    </div>
+
                     {/* 내담자 번호 목록 테이블 */}
                     {clientList.length === 0 ? (
                       <div className="p-6 text-center text-xs text-slate-500">등록된 내담자가 없습니다.</div>
+                    ) : filteredClientList.length === 0 ? (
+                      <div className="p-8 text-center text-xs text-slate-400 bg-slate-950/40 rounded-2xl border border-slate-800 space-y-2">
+                        <div className="text-2xl">🔍</div>
+                        <div className="font-bold text-slate-300">선택하신 조건의 내담자가 없습니다.</div>
+                        <button
+                          type="button"
+                          onClick={() => setCounselorFilter('ALL')}
+                          className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg font-bold text-xs shadow touch-btn"
+                        >
+                          전체 내담자 보기
+                        </button>
+                      </div>
                     ) : (
                       <div className="overflow-x-auto">
                         <table className="w-full text-left text-xs">
@@ -1791,6 +2038,7 @@ ${sessionDetails}
                             <tr className="border-b border-slate-800 text-slate-400 font-bold text-[11px]">
                               <th className="py-2.5 px-3">식별 번호</th>
                               <th className="py-2.5 px-3">내담자 닉네임</th>
+                              <th className="py-2.5 px-3">담당 상담사</th>
                               <th className="py-2.5 px-3">인적 사항</th>
                               <th className="py-2.5 px-3">누적 기록</th>
                               <th className="py-2.5 px-3">최근 제출일</th>
@@ -1799,9 +2047,10 @@ ${sessionDetails}
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-800/60">
-                            {clientList.map((c) => {
+                            {filteredClientList.map((c) => {
                               const isSelected = c.key === selectedClientKey;
                               const p = profiles[c.key];
+                              const counselor = p?.counselorName || '';
                               // 동일 닉네임이 여러 명 있는지 확인
                               const sameNickCount = clientList.filter(other => other.nickname === c.nickname).length;
 
@@ -1856,6 +2105,39 @@ ${sessionDetails}
                                       )}
                                     </div>
                                   </td>
+                                  <td className="py-2.5 px-3 whitespace-nowrap">
+                                    {counselor ? (
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="px-2.5 py-0.5 bg-indigo-950/90 border border-indigo-700 text-indigo-300 rounded-lg text-xs font-bold inline-flex items-center gap-1 shadow-sm">
+                                          <span>🧑‍⚕️</span>
+                                          <span>{counselor}</span>
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleAssignCounselor(c);
+                                          }}
+                                          className="text-[10px] px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 touch-btn"
+                                          title="담당 상담사 변경"
+                                        >
+                                          ✏️
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleAssignCounselor(c);
+                                        }}
+                                        className="px-2 py-0.5 bg-slate-800 hover:bg-indigo-950 text-slate-400 hover:text-indigo-200 border border-slate-700 hover:border-indigo-700 rounded-lg text-[11px] font-bold touch-btn inline-flex items-center gap-1 transition-colors"
+                                        title="이 내담자에게 담당 상담사 지정"
+                                      >
+                                        <span>+ 상담사 지정</span>
+                                      </button>
+                                    )}
+                                  </td>
                                   <td className="py-2.5 px-3 text-slate-400 whitespace-nowrap">
                                     {p && (p.age || (p.gender && p.gender !== '미지정')) ? (
                                       <span>
@@ -1885,6 +2167,18 @@ ${sessionDetails}
                                   </td>
                                   <td className="py-2.5 px-3 text-right whitespace-nowrap">
                                     <div className="inline-flex items-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleAssignCounselor(c);
+                                        }}
+                                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-lg text-[11px] font-bold touch-btn inline-flex items-center gap-1 shadow-sm"
+                                        title="담당 상담사 지정/변경"
+                                      >
+                                        <span>🧑‍⚕️</span>
+                                        <span>{counselor ? '상담사 변경' : '상담사 배정'}</span>
+                                      </button>
                                       <button
                                         type="button"
                                         onClick={(e) => {
@@ -1969,6 +2263,48 @@ ${sessionDetails}
                           </div>
 
                           <form onSubmit={handleSaveProfile} className="space-y-3.5 text-xs">
+                            {/* 담당 상담사 지정 */}
+                            <div>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <label className="block text-slate-300 font-bold">담당 상담사 (Assigned Counselor)</label>
+                                {currentCounselorName && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setProfileCounselor(currentCounselorName)}
+                                    className="text-[10px] text-amber-400 hover:text-amber-300 font-bold"
+                                  >
+                                    + 내 이름({currentCounselorName}) 입력
+                                  </button>
+                                )}
+                              </div>
+                              <input
+                                type="text"
+                                placeholder="예: 김상담 (비워두면 미배정)"
+                                value={profileCounselor}
+                                onChange={(e) => setProfileCounselor(e.target.value)}
+                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-indigo-500"
+                              />
+                              {allCounselors.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1.5">
+                                  <span className="text-[10px] text-slate-500 mr-1">빠른 선택:</span>
+                                  {allCounselors.map(name => (
+                                    <button
+                                      key={name}
+                                      type="button"
+                                      onClick={() => setProfileCounselor(name)}
+                                      className={`text-[10px] px-1.5 py-0.5 rounded-md border font-bold ${
+                                        profileCounselor === name
+                                          ? 'bg-indigo-600 border-indigo-500 text-white'
+                                          : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                                      }`}
+                                    >
+                                      {name}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
                             {/* 성별 선택 */}
                             <div>
                               <label className="block text-slate-300 font-bold mb-1.5">성별 (Gender)</label>

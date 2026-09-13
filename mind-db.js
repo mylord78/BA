@@ -266,8 +266,11 @@
     save: (profile) => {
       try {
         const all = LocalProfiles.getAll();
-        all[profile.nickname] = profile;
-        localStorage.setItem(LOCAL_PROFILES_KEY, JSON.stringify(all));
+        const key = profile.clientKey || profile.key || profile.nickname;
+        if (key) {
+          all[key] = profile;
+          localStorage.setItem(LOCAL_PROFILES_KEY, JSON.stringify(all));
+        }
       } catch (e) {}
     }
   };
@@ -779,27 +782,28 @@
         return LocalProfiles.getAll();
       },
 
-      get: async (nickname) => {
-        if (!nickname || nickname === 'ALL') return null;
+      get: async (key) => {
+        if (!key || key === 'ALL') return null;
         if (!isFirestoreInitialized) initFirestore();
         if (isFirestoreInitialized && firestoreDb) {
           try {
-            const doc = await firestoreDb.collection(COLLECTION_PROFILES).doc(nickname).get();
+            const doc = await firestoreDb.collection(COLLECTION_PROFILES).doc(key).get();
             if (doc.exists) return doc.data();
           } catch (e) {}
         }
-        return LocalProfiles.getAll()[nickname] || null;
+        return LocalProfiles.getAll()[key] || null;
       },
 
       save: async (profile) => {
-        if (!profile || !profile.nickname) return { success: false, error: '닉네임 필수' };
+        const docKey = profile ? (profile.clientKey || profile.key || profile.nickname) : null;
+        if (!docKey) return { success: false, error: '식별 키 필수' };
         LocalProfiles.save(profile);
 
         if (!isFirestoreInitialized) initFirestore();
         if (isFirestoreInitialized && firestoreDb) {
           try {
-            await firestoreDb.collection(COLLECTION_PROFILES).doc(profile.nickname).set(profile, { merge: true });
-            console.log('[MindDB Profile] 내담자 기본정보 클라우드 저장 완료:', profile.nickname);
+            await firestoreDb.collection(COLLECTION_PROFILES).doc(docKey).set(profile, { merge: true });
+            console.log('[MindDB Profile] 내담자 기본정보 클라우드 저장 완료:', docKey);
             return { success: true, mode: 'firestore' };
           } catch (e) {
             console.error('[MindDB Profile] Firestore 저장 실패:', e);

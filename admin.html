@@ -124,7 +124,7 @@
       const [passwordError, setPasswordError] = useState('');
 
       const [records, setRecords] = useState([]);
-      const [selectedNickname, setSelectedNickname] = useState('ALL');
+      const [selectedNickname, setSelectedNickname] = useState('');
       const [selectedSessionId, setSelectedSessionId] = useState(null);
       const [activeTab, setActiveTab] = useState('report'); // 'report' | 'network' | 'clients'
 
@@ -228,6 +228,20 @@
         });
       };
 
+      // 내담자 데이터 로드/갱신 시 개별 내담자 자동 선택 (철저한 1:1 개인별 분석 보장)
+      useEffect(() => {
+        if (records.length > 0) {
+          const names = Array.from(new Set(records.map(r => r.nickname || '익명')));
+          if (!selectedNickname || selectedNickname === 'ALL' || !names.includes(selectedNickname)) {
+            setSelectedNickname(names[0]);
+            setSelectedSessionId(null);
+          }
+        } else {
+          setSelectedNickname('');
+          setSelectedSessionId(null);
+        }
+      }, [records]);
+
       // 1. 상담자 전용 내담자 프로필 실시간 구독
       useEffect(() => {
         const unsubscribe = MindDB.Profile.subscribe((map) => {
@@ -240,7 +254,7 @@
 
       // 2. 선택된 내담자 변경 시 프로필 폼 상태 동기화 및 메모 실시간 구독
       useEffect(() => {
-        if (!selectedNickname || selectedNickname === 'ALL') {
+        if (!selectedNickname) {
           setNotes([]);
           setProfileGender('미지정');
           setProfileAge('');
@@ -283,7 +297,7 @@
       // 내담자 기본정보 (성별, 나이 등) 저장 핸들러
       const handleSaveProfile = async (e) => {
         if (e) e.preventDefault();
-        if (!selectedNickname || selectedNickname === 'ALL') {
+        if (!selectedNickname) {
           alert("먼저 좌측에서 특정 내담자를 선택해 주세요.");
           return;
         }
@@ -308,7 +322,7 @@
       // 새 임상 메모 등록 핸들러
       const handleAddNote = async (e) => {
         e.preventDefault();
-        if (!selectedNickname || selectedNickname === 'ALL') {
+        if (!selectedNickname) {
           alert("먼저 메모를 작성할 내담자를 좌측에서 선택해 주세요.");
           return;
         }
@@ -444,20 +458,21 @@
         return Array.from(set);
       }, [records]);
 
-      // 필터링된 레코드 목록
+      // 선택된 내담자 1인의 세션 기록 목록 (철저한 개인별 격리)
       const filteredRecords = useMemo(() => {
-        if (selectedNickname === 'ALL') return records;
+        if (!selectedNickname) return [];
         return records.filter(r => (r.nickname || '익명') === selectedNickname);
       }, [records, selectedNickname]);
 
-      // 현재 분석 대상 세션(단일 세션 or 선택된 내담자의 전체 세션)
+      // 현재 분석 대상 세션(선택된 내담자의 특정 세션 or 선택된 내담자의 전체 누적 세션)
       const targetChains = useMemo(() => {
+        if (!selectedNickname) return [];
         if (selectedSessionId) {
-          const found = records.filter(r => r.id === selectedSessionId);
+          const found = filteredRecords.filter(r => r.id === selectedSessionId);
           return found.length > 0 ? found : filteredRecords;
         }
-        return filteredRecords.length > 0 ? filteredRecords : records;
-      }, [records, filteredRecords, selectedSessionId]);
+        return filteredRecords;
+      }, [filteredRecords, selectedSessionId, selectedNickname]);
 
       // 네트워크 통계 지표 계산
       const metrics = useMemo(() => {
@@ -636,35 +651,36 @@
       };
 
       // ==========================================
-      // ★ 연구자/상담사용 LLM 자동 심층 생성 엔진
+      // ★ 연구자/상담사용 LLM 개인별 자동 심층 소견서 엔진
       // ==========================================
       const generateResearcherReport = async () => {
-        if (targetChains.length === 0) return;
+        if (targetChains.length === 0 || !selectedNickname) return;
 
         setIsGenerating(true);
         const targetDesc = selectedSessionId 
-          ? `단일 세션 (ID: ${selectedSessionId})` 
-          : (selectedNickname === 'ALL' ? `전체 ${records.length}건 누적 데이터` : `내담자 [${selectedNickname}] 누적 ${targetChains.length}건`);
+          ? `[${selectedNickname} 님] 단일 회기 세션 (ID: #${selectedSessionId})` 
+          : `[${selectedNickname} 님] 개인 누적 ${targetChains.length}회기 종합 데이터`;
         setLastAnalyzedTarget(targetDesc);
 
         // 내담자 세션 데이터 요약 스트링
         const sessionDetails = targetChains.map((c, i) => 
-          `[세션 ${i + 1}] 일시: ${c.date} | 내담자: ${c.nickname || '익명'}\n` +
+          `[회기 ${i + 1}] 일시: ${c.date} | 내담자: ${selectedNickname}\n` +
           c.sequence.map(s => `  - (${s.type}) ${s.label}`).join('\n')
         ).join('\n\n');
 
         const cleanKey = apiKey.trim();
 
-        const clientProfile = (selectedNickname && selectedNickname !== 'ALL') ? profiles[selectedNickname] : null;
+        const clientProfile = profiles[selectedNickname] || null;
         const profileInfoStr = clientProfile 
-          ? `내담자 기본 인적사항: ${clientProfile.gender || '성별 미상'}, 만 ${clientProfile.age ? clientProfile.age + '세' : '연령 미상'}${clientProfile.primaryConcern ? ' (주호소: ' + clientProfile.primaryConcern + ')' : ''}`
-          : '전체 내담자 집단 통합 분석';
+          ? `내담자 [${selectedNickname} 님]: 성별 ${clientProfile.gender || '미지정'}, 만 ${clientProfile.age ? clientProfile.age + '세' : '연령 미상'}${clientProfile.primaryConcern ? ' (주호소: ' + clientProfile.primaryConcern + ')' : ''}`
+          : `내담자 [${selectedNickname} 님] (개인 인적사항 미입력)`;
 
-        // Gemini API 키가 있는 경우: 실제 실시간 LLM 자동 생성
+        // Gemini API 키가 있는 경우: 실제 실시간 LLM 개인별 자동 생성
         if (cleanKey) {
           try {
             const prompt = `당신은 행동활성화(Behavioral Activation, BA) 및 네트워크 심리측정학(Network Psychometrics) 분야의 권위 있는 수석 임상심리학자 겸 연구책임자입니다.
-다음 내담자의 실제 상태 전이 네트워크 데이터 및 인적 프로필을 정밀 분석하고, 학술 연구 및 임상 사례보고서 수준의 [동적 상태 전이 네트워크 및 수반성 평가 소견서]를 작성해 주세요.
+다음 내담자([${selectedNickname} 님])의 실제 개인 상태 전이 네트워크 데이터 및 인적 프로필을 정밀 분석하고, 학술 연구 및 임상 사례보고서 수준의 [개인별 동적 상태 전이 네트워크 및 수반성 평가 소견서]를 작성해 주세요.
+(중요 원칙: 본 소견서는 개인 맞춤형(idiographic) 임상 보고서입니다. 타인의 데이터나 일반론을 섞지 말고 오직 [${selectedNickname} 님]의 고유한 수반성 데이터와 행동 연쇄에만 집중하여 작성하십시오.)
 
 [내담자 데이터 세부 내역]
 분석 대상: ${targetDesc} (${profileInfoStr})
@@ -682,20 +698,20 @@ ${sessionDetails}
 - 긍정적 대처 자원 노드(Positive Coping Resource): ${metrics.topPositiveCoping}
 - 최다 빈도 전이 엣지: ${metrics.topTransition}
 
-[작성 가이드라인 - 내담자의 연령/성별 특성 및 위 실제 데이터를 철저히 기반으로 서술할 것]
-# 1. TRAP 모델 기반 동적 부적 강화 수반성 (Negative Reinforcement Contingency) 분석
-- 내담자가 경험한 Trigger(${metrics.topTrigger})와 신체·정서 반응(${metrics.topEmotion}, ${metrics.topBody})이 어떤 조건부 전이 확률로 회피 행동 [${metrics.topBottleneck}]에 수렴하는지 메커니즘을 상세히 규명할 것.
+[작성 가이드라인 - ${selectedNickname} 님의 연령/성별 특성 및 위 실제 데이터를 철저히 기반으로 서술할 것]
+# 1. TRAP 모델 기반 [${selectedNickname} 님]의 동적 부적 강화 수반성 (Negative Reinforcement Contingency) 분석
+- [${selectedNickname} 님]이 경험한 Trigger(${metrics.topTrigger})와 신체·정서 반응(${metrics.topEmotion}, ${metrics.topBody})이 어떤 조건부 전이 확률로 회피 행동 [${metrics.topBottleneck}]에 수렴하는지 메커니즘을 상세히 규명할 것.
 - 단기적 고통 회피(부적 강화)가 어떻게 긍정적 보상과의 접촉을 차단하고 이차 손실([${metrics.topOutcome}])을 고착시키는지 학술적으로 분석할 것.
 
-# 2. 최적 중재 지점 (Targeted Circuit-Breaking Disruption Point)
-- 네트워크 상에서 가장 가중치가 높은 엣지 [${metrics.topTransition}]를 끊어내기 위한 구체적 중재 시점을 명시할 것.
+# 2. [${selectedNickname} 님]의 최적 중재 지점 (Targeted Circuit-Breaking Disruption Point)
+- [${selectedNickname} 님]의 네트워크 상에서 가장 가중치가 높은 엣지 [${metrics.topTransition}]를 끊어내기 위한 구체적 중재 시점을 명시할 것.
 - 인지적 개입 vs 신체 감각 그라운딩(Grounding) 중 어느 것이 선행되어야 하는지 임상적 근거를 제시할 것.
 
 # 3. TRAC 모델 기반 긍정적 대처 자원 [${metrics.topPositiveCoping}]의 서킷 브레이킹 효용
-- 내담자가 직접 수용한 긍정 대처 [${metrics.topPositiveCoping}]을 미세 행동 활성화(Micro-activity Activation)로 안착시키기 위한 단계별 처방을 기술할 것.
+- [${selectedNickname} 님]이 직접 수용한 긍정 대처 [${metrics.topPositiveCoping}]을 미세 행동 활성화(Micro-activity Activation)로 안착시키기 위한 단계별 처방을 기술할 것.
 
-# 4. 임상 치료 제언 및 다음 세션 프로토콜
-- 다음 상담 시 상담사/치료자가 반드시 모니터링해야 할 핵심 전이 신호와 주의사항을 3가지 제안할 것.
+# 4. [${selectedNickname} 님]을 위한 임상 치료 제언 및 다음 세션 프로토콜
+- 다음 상담 시 상담사/치료자가 [${selectedNickname} 님]을 위해 반드시 모니터링해야 할 핵심 전이 신호와 주의사항을 3가지 제안할 것.
 
 형식: 전문 임상용 마크다운 형식으로 격조 높은 한국어 학술체로 작성하세요.`;
 
@@ -722,24 +738,24 @@ ${sessionDetails}
         }
 
         // Gemini API 키가 없거나 실패 시: 내담자의 실제 모든 입력값을 조합한 정밀 알고리즘 자동 보고서 생성
-        const autoGeneratedReport = `> **[임상 프로필]** ${profileInfoStr}
+        const autoGeneratedReport = `> **[개인 임상 프로필]** ${profileInfoStr}
 
-## 1. TRAP 모델 기반 동적 부적 강화 수반성 (Negative Reinforcement Contingency) 분석
-본 내담자(분석 표본 N=${metrics.totalChains})의 상태 전이 네트워크를 분석한 결과, 주 촉발 기폭제(Ignition Node)인 **[${metrics.ignitionNode}]** 및 취약 신체/정서 상태(**${metrics.topEmotion}**, **${metrics.topBody}**)는 높은 조건부 전이 확률로 회피성 중심 허브 행동인 **[${metrics.topBottleneck}]**으로 수렴하고 있습니다.
+## 1. TRAP 모델 기반 [${selectedNickname} 님]의 동적 부적 강화 수반성 (Negative Reinforcement Contingency) 분석
+본 내담자([${selectedNickname} 님], 분석 표본 N=${metrics.totalChains}회)의 개인 상태 전이 네트워크를 정밀 분석한 결과, 주 촉발 기폭제(Ignition Node)인 **[${metrics.ignitionNode}]** 및 취약 신체/정서 상태(**${metrics.topEmotion}**, **${metrics.topBody}**)는 높은 조건부 전이 확률로 중심 회피 허브 행동인 **[${metrics.topBottleneck}]**으로 수렴하고 있습니다.
 
-이 패턴은 심리적 고통으로부터의 일시적 격리라는 단기 부적 강화(Negative Reinforcement)를 제공하여 행동의 빈도를 유지시키고 있으나, 그 대가로 환경 내 긍정적 강화물과의 접촉을 박탈(Extinction of Positive Reinforcers)시키며, 최종적으로 **[${metrics.topOutcome}]**이라는 심각한 이차적 기능 손상(Secondary Loss)으로 귀결되는 악순환 루프를 형성하고 있습니다.
+이 패턴은 심리적 고통으로부터의 일시적 격리라는 단기 부적 강화(Negative Reinforcement)를 제공하여 행동의 빈도를 유지시키고 있으나, 그 대가로 환경 내 긍정적 강화물과의 접촉을 박탈(Extinction of Positive Reinforcers)시키며, 최종적으로 **[${metrics.topOutcome}]**이라는 심각한 이차적 기능 손상(Secondary Loss)으로 귀결되는 고착화 루프를 형성하고 있습니다.
 
-## 2. 최적 중재 지점 (Targeted Circuit-Breaking Point)
-네트워크 상에서 가장 엣지 가중치(Edge Weight)가 높은 전이 경로는 **[${metrics.topTransition}]**으로 확인되었습니다. 
-내담자의 인지적 반추(**"${metrics.topThought}"**)가 진행되기 직전, 신체적 각성 수준(**${metrics.topBody}**)이 감지되는 순간이 가장 결정적인 개입 골든타임(Window of Opportunity)입니다. 인지적 논박보다는 감각 접촉(Sensory Grounding)과 자율신경계 이완을 우선 투입하는 것이 회피 행동으로의 수렴을 저지하는 데 가장 유효합니다.
+## 2. [${selectedNickname} 님]의 최적 중재 지점 (Targeted Circuit-Breaking Point)
+네트워크 상에서 가장 엣지 가중치(Edge Weight)가 높은 핵심 전이 경로는 **[${metrics.topTransition}]**으로 확인되었습니다. 
+내담자의 인지적 반추(**"${metrics.topThought}"**)가 심화되기 직전, 신체적 각성 수준(**${metrics.topBody}**)이 감지되는 순간이 가장 결정적인 개입 골든타임(Window of Opportunity)입니다. 인지적 논박보다는 감각 접촉(Sensory Grounding)과 자율신경계 이완을 우선 투입하는 것이 회피 행동으로의 수렴을 저지하는 데 가장 유효합니다.
 
 ## 3. TRAC 모델 긍정적 대처 자원 [${metrics.topPositiveCoping}]의 서킷 브레이킹 전략
-내담자가 설문에서 선택한 긍정적 대처 자원인 **[${metrics.topPositiveCoping}]**은 악순환 체인을 차단할 수 있는 가장 유망한 대체 대처 행동(Alternative Coping Action)입니다.
+[${selectedNickname} 님]이 설문에서 직접 선택한 긍정적 대처 자원인 **[${metrics.topPositiveCoping}]**은 악순환 체인을 차단할 수 있는 가장 유망한 대체 대처 행동(Alternative Coping Action)입니다.
 - **Micro-Activation 프로토콜**: 회피 행동 **[${metrics.topBottleneck}]**이 촉발되기 전 3분의 버퍼 타임을 설정하고, **[${metrics.topPositiveCoping}]**을 선행 실행하도록 구조화된 행동 계약을 체결합니다.
 - **보상 수반성 재설정**: 이 작은 실천을 통해 신체 긴장도를 낮추고 자책감을 완화하여, 환경 내 유의미한 활동과의 재접촉 기회를 확보합니다.
 
-## 4. 임상 치료 제언 및 다음 세션 가이드
-1. **신체 신호 모니터링**: 내담자가 **[${metrics.topBody}]**를 회피의 전조 증상으로 조기에 자각할 수 있도록 신체 감각 일지를 병행합니다.
+## 4. [${selectedNickname} 님]을 위한 임상 치료 제언 및 다음 세션 가이드
+1. **신체 신호 모니터링**: [${selectedNickname} 님]이 **[${metrics.topBody}]**를 회피의 전조 증상으로 조기에 자각할 수 있도록 신체 감각 일지를 병행합니다.
 2. **단기 안도의 착시 교육**: **[${metrics.topBottleneck}]**이 주는 '잠깐의 편안함'과 '뒤따르는 **${metrics.topOutcome}**'의 시간차 결과를 심리교육(Psychoeducation)합니다.
 3. **긍정 대처의 일상화**: **[${metrics.topPositiveCoping}]** 실행 시 내담자의 자기효능감 및 정서적 완화 정도를 다음 회기에서 점수화(0~10점)하여 추적 평가합니다.`;
 
@@ -751,8 +767,11 @@ ${sessionDetails}
 
       // 타겟 체인이나 내담자가 변경되면 리포트 자동 생성 트리거
       useEffect(() => {
-        if (targetChains.length > 0) {
+        if (targetChains.length > 0 && selectedNickname) {
           generateResearcherReport();
+        } else {
+          setLlmReport('');
+          setLastAnalyzedTarget('');
         }
       }, [selectedNickname, selectedSessionId, targetChains]);
 
@@ -922,32 +941,43 @@ ${sessionDetails}
             {/* 좌측 사이드바: 내담자 및 세션 필터링 */}
             <aside className="w-full md:w-80 bg-slate-900/70 border-r border-slate-800 p-4 space-y-5 shrink-0">
               <div>
-                <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider block mb-2">
-                  👤 내담자 선택
-                </span>
-                <select
-                  value={selectedNickname}
-                  onChange={(e) => {
-                    setSelectedNickname(e.target.value);
-                    setSelectedSessionId(null);
-                  }}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs sm:text-sm font-bold text-white focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="ALL">전체 내담자 통합 분석 ({records.length}건)</option>
-                  {nicknames.map(name => {
-                    const count = records.filter(r => (r.nickname || '익명') === name).length;
-                    const p = profiles[name];
-                    const meta = [];
-                    if (p && p.age) meta.push(`${p.age}세`);
-                    if (p && p.gender && p.gender !== '미지정') meta.push(p.gender);
-                    const metaStr = meta.length > 0 ? ` [${meta.join('/')}]` : '';
-                    return (
-                      <option key={name} value={name}>{name}{metaStr} ({count}회 기록)</option>
-                    );
-                  })}
-                </select>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                    👤 내담자 선택 (1:1 개인 분석)
+                  </span>
+                  <span className="px-1.5 py-0.5 bg-indigo-950 text-indigo-300 border border-indigo-800 rounded text-[10px] font-bold">
+                    총 {nicknames.length}명
+                  </span>
+                </div>
 
-                {selectedNickname !== 'ALL' && (
+                {nicknames.length === 0 ? (
+                  <div className="p-3 bg-slate-800/60 border border-slate-700 rounded-xl text-center text-xs text-slate-400">
+                    수신된 내담자 기록이 없습니다.
+                  </div>
+                ) : (
+                  <select
+                    value={selectedNickname}
+                    onChange={(e) => {
+                      setSelectedNickname(e.target.value);
+                      setSelectedSessionId(null);
+                    }}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs sm:text-sm font-bold text-white focus:outline-none focus:border-indigo-500 shadow-sm"
+                  >
+                    {nicknames.map(name => {
+                      const count = records.filter(r => (r.nickname || '익명') === name).length;
+                      const p = profiles[name];
+                      const meta = [];
+                      if (p && p.age) meta.push(`${p.age}세`);
+                      if (p && p.gender && p.gender !== '미지정') meta.push(p.gender);
+                      const metaStr = meta.length > 0 ? ` [${meta.join('/')}]` : '';
+                      return (
+                        <option key={name} value={name}>👤 {name}{metaStr} ({count}회기 기록)</option>
+                      );
+                    })}
+                  </select>
+                )}
+
+                {selectedNickname && (
                   <div className="mt-2.5 p-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-xs space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-indigo-300">
@@ -962,11 +992,18 @@ ${sessionDetails}
                         <span className="bg-amber-950/80 border border-amber-800 px-1 rounded text-[10px] text-amber-300 font-mono">{notes.length}건</span>
                       </button>
                     </div>
-                    {profiles[selectedNickname]?.primaryConcern && (
+                    {profiles[selectedNickname]?.primaryConcern ? (
                       <div className="text-[11px] text-slate-400 truncate">
                         주호소: {profiles[selectedNickname].primaryConcern}
                       </div>
+                    ) : (
+                      <div className="text-[10px] text-slate-500 italic">
+                        인적사항 미기재 (우측 탭에서 입력 가능)
+                      </div>
                     )}
+                    <div className="pt-1 text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                      <span>✓</span> <span>타 내담자 데이터 혼합 없는 1:1 개인 전이도/소견서</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -975,14 +1012,14 @@ ${sessionDetails}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    📅 세션 기록 목록 ({filteredRecords.length})
+                    📅 회기 기록 ({filteredRecords.length}회)
                   </span>
                   {selectedSessionId && (
                     <button
                       onClick={() => setSelectedSessionId(null)}
                       className="text-[11px] text-indigo-400 hover:underline font-bold"
                     >
-                      전체 보기
+                      전체 회기 보기
                     </button>
                   )}
                 </div>
@@ -1040,16 +1077,18 @@ ${sessionDetails}
                 <span className="text-xs font-bold text-slate-500 block">데이터 백업 & 관리</span>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => MindDB.exportCSV(records)}
+                    onClick={() => MindDB.exportCSV(filteredRecords.length > 0 ? filteredRecords : records)}
                     className="flex-1 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow touch-btn flex items-center justify-center gap-1"
+                    title={selectedNickname ? `[${selectedNickname} 님] 세션 기록 CSV 추출` : "전체 CSV 추출"}
                   >
-                    <span>📊</span> CSV 추출
+                    <span>📊</span> {selectedNickname ? `${selectedNickname} CSV` : 'CSV 추출'}
                   </button>
                   <button
                     onClick={() => MindDB.exportJSON(records)}
                     className="flex-1 py-2 bg-indigo-700 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold shadow touch-btn flex items-center justify-center gap-1"
+                    title="전체 데이터 JSON 백업 덤프"
                   >
-                    <span>📥</span> JSON 덤프
+                    <span>📥</span> 전체 JSON
                   </button>
                 </div>
                 <div className="flex gap-2 pt-1">
@@ -1103,7 +1142,7 @@ ${sessionDetails}
                     }`}
                   >
                     <span>📋</span> 내담자 기본정보 & 임상 메모
-                    {selectedNickname !== 'ALL' && notes.length > 0 && (
+                    {selectedNickname && notes.length > 0 && (
                       <span className="px-1.5 py-0.2 bg-indigo-900 text-indigo-300 rounded-full text-[10px] font-mono">
                         {notes.length}
                       </span>
@@ -1112,84 +1151,115 @@ ${sessionDetails}
                 </div>
 
                 <div className="text-xs text-slate-400 font-medium">
-                  현재 분석 대상: <strong className="text-indigo-300 font-bold">{lastAnalyzedTarget || '로딩 중...'}</strong>
+                  현재 분석 대상: <strong className="text-indigo-300 font-bold">{lastAnalyzedTarget || '내담자 선택 대기 중'}</strong>
                 </div>
               </div>
 
               {/* 1. LLM 자동 임상 소견서 탭 */}
               {activeTab === 'report' && (
-                <div className="space-y-4">
-                  {/* 통계 요약 카드 4종 */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800">
-                      <span className="text-[11px] text-slate-500 block">분석 세션 수</span>
-                      <strong className="text-xl font-black text-indigo-400">{metrics.totalChains} Sessions</strong>
+                targetChains.length === 0 ? (
+                  <div className="p-16 text-center bg-slate-900 rounded-3xl border border-slate-800 space-y-3">
+                    <span className="text-4xl block">📋</span>
+                    <h3 className="text-base font-bold text-slate-200">생성할 소견서 데이터가 없습니다</h3>
+                    <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                      {selectedNickname ? `[${selectedNickname} 님]의 수신된 세션 기록이 없습니다.` : '좌측에서 분석할 내담자를 선택해 주세요.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* 통계 요약 카드 4종 */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800">
+                        <span className="text-[11px] text-slate-500 block">분석 대상 회기</span>
+                        <strong className="text-xl font-black text-indigo-400">
+                          {selectedSessionId ? '1 Session' : `${metrics.totalChains} Sessions`}
+                        </strong>
+                      </div>
+                      <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800">
+                        <span className="text-[11px] text-slate-500 block">최대 기폭제 (Ignition)</span>
+                        <strong className="text-sm sm:text-base font-black text-amber-400 truncate block">{metrics.ignitionNode}</strong>
+                      </div>
+                      <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800">
+                        <span className="text-[11px] text-slate-500 block">핵심 병목 회피행동 (Hub)</span>
+                        <strong className="text-sm sm:text-base font-black text-rose-400 truncate block">{metrics.topBottleneck}</strong>
+                      </div>
+                      <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800">
+                        <span className="text-[11px] text-slate-500 block">선정된 긍정 대처 자원</span>
+                        <strong className="text-sm sm:text-base font-black text-emerald-400 truncate block">{metrics.topPositiveCoping}</strong>
+                      </div>
                     </div>
-                    <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800">
-                      <span className="text-[11px] text-slate-500 block">최대 기폭제 (Ignition)</span>
-                      <strong className="text-sm sm:text-base font-black text-amber-400 truncate block">{metrics.ignitionNode}</strong>
-                    </div>
-                    <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800">
-                      <span className="text-[11px] text-slate-500 block">핵심 병목 회피행동 (Hub)</span>
-                      <strong className="text-sm sm:text-base font-black text-rose-400 truncate block">{metrics.topBottleneck}</strong>
-                    </div>
-                    <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800">
-                      <span className="text-[11px] text-slate-500 block">선정된 긍정 대처 자원</span>
-                      <strong className="text-sm sm:text-base font-black text-emerald-400 truncate block">{metrics.topPositiveCoping}</strong>
+
+                    {/* 리포트 카드 본문 */}
+                    <div className="p-6 bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl space-y-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider block">
+                              Individual Behavioral Activation Protocol
+                            </span>
+                            <span className="px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-md text-[10px] font-bold">
+                              개인별 1:1 맞춤형
+                            </span>
+                          </div>
+                          <h2 className="text-xl font-black text-white mt-1">
+                            [{selectedNickname} 님] 동적 상태 전이 네트워크 및 수반성 평가 소견서
+                          </h2>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            {selectedSessionId 
+                              ? `회기 #${selectedSessionId} 단일 세션 정밀 소견서` 
+                              : `누적 ${targetChains.length}개 회기 종합 기능분석(Functional Analysis) 소견서`}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={generateResearcherReport}
+                            disabled={isGenerating}
+                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-800 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 touch-btn"
+                          >
+                            {isGenerating ? <span className="animate-spin">⏳</span> : <span>🔄</span>}
+                            <span>AI 소견서 재생성</span>
+                          </button>
+
+                          <button
+                            onClick={copyReport}
+                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 touch-btn"
+                          >
+                            <span>📋</span> 소견서 복사
+                          </button>
+                        </div>
+                      </div>
+
+                      {isGenerating ? (
+                        <div className="py-16 flex flex-col items-center justify-center space-y-3">
+                          <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                          <p className="text-sm font-bold text-indigo-300">
+                            {apiKey ? `Gemini 임상 LLM이 [${selectedNickname} 님]의 학술 소견서를 작성 중입니다...` : `[${selectedNickname} 님]의 네트워크 전이 수반성을 분석하여 개인 맞춤 소견서를 자동 생성하고 있습니다...`}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="py-2">
+                          <MarkdownRenderer content={llmReport} />
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  {/* 리포트 카드 본문 */}
-                  <div className="p-6 bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
-                      <div>
-                        <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider block">
-                          Clinical Psychometrics & Behavioral Activation Protocol
-                        </span>
-                        <h2 className="text-xl font-black text-white mt-1">
-                          동적 상태 전이 네트워크 및 수반성 평가 소견서
-                        </h2>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={generateResearcherReport}
-                          disabled={isGenerating}
-                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-800 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 touch-btn"
-                        >
-                          {isGenerating ? <span className="animate-spin">⏳</span> : <span>🔄</span>}
-                          <span>AI 소견서 재생성</span>
-                        </button>
-
-                        <button
-                          onClick={copyReport}
-                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 touch-btn"
-                        >
-                          <span>📋</span> 소견서 복사
-                        </button>
-                      </div>
-                    </div>
-
-                    {isGenerating ? (
-                      <div className="py-16 flex flex-col items-center justify-center space-y-3">
-                        <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                        <p className="text-sm font-bold text-indigo-300">
-                          {apiKey ? "Gemini 임상 LLM이 실시간 학술 소견서를 작성 중입니다..." : "네트워크 전이 수반성을 분석하여 임상 소견서를 자동 생성하고 있습니다..."}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="py-2">
-                        <MarkdownRenderer content={llmReport} />
-                      </div>
-                    )}
-                  </div>
-                </div>
+                )
               )}
 
               {/* 2. 네트워크 지도 탭 */}
               {activeTab === 'network' && (
                 <div className="space-y-4">
-                  <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 flex items-center justify-between text-xs font-bold">
+                  <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs font-bold">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">🕸️</span>
+                      <span className="text-sm font-black text-white">
+                        [{selectedNickname || '내담자'} 님] 개인 상태 전이 네트워크 지도
+                      </span>
+                      <span className="px-2 py-0.5 bg-indigo-900/80 text-indigo-300 border border-indigo-700 rounded-md text-[11px] font-bold">
+                        {selectedSessionId ? `단일 회기 (#${selectedSessionId})` : `누적 ${targetChains.length}회기 전이도`}
+                      </span>
+                    </div>
                     <div className="flex items-center gap-4">
                       <span className="flex items-center gap-1.5 text-amber-400">
                         <span className="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
@@ -1204,12 +1274,21 @@ ${sessionDetails}
                         🌱 긍정적 대처 회복로
                       </span>
                     </div>
-                    <span className="text-slate-400">노드를 마우스로 드래그하거나 휠로 줌인할 수 있습니다.</span>
                   </div>
 
-                  <div className="relative bg-slate-900 rounded-3xl border border-slate-800 p-2 overflow-hidden shadow-inner">
-                    <svg ref={svgRef} className="w-full h-[480px]"></svg>
-                  </div>
+                  {targetChains.length === 0 ? (
+                    <div className="p-16 text-center bg-slate-900 rounded-3xl border border-slate-800 space-y-3">
+                      <span className="text-4xl block">🕸️</span>
+                      <h3 className="text-base font-bold text-slate-200">표시할 전이도 데이터가 없습니다</h3>
+                      <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                        {selectedNickname ? `[${selectedNickname} 님]의 세션 기록이 없습니다.` : '좌측에서 내담자를 선택해 주세요.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="relative bg-slate-900 rounded-3xl border border-slate-800 p-2 overflow-hidden shadow-inner">
+                      <svg ref={svgRef} className="w-full h-[480px]"></svg>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1230,12 +1309,12 @@ ${sessionDetails}
                     </div>
                   </div>
 
-                  {selectedNickname === 'ALL' ? (
+                  {!selectedNickname ? (
                     <div className="p-12 text-center bg-slate-900 rounded-3xl border border-slate-800 space-y-3">
                       <span className="text-4xl block">👤</span>
-                      <h3 className="text-base font-bold text-slate-200">내담자를 먼저 선택해 주세요</h3>
+                      <h3 className="text-base font-bold text-slate-200">등록된 내담자가 없습니다</h3>
                       <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-                        좌측 사이드바의 <strong>[👤 내담자 선택]</strong> 드롭다운에서 관리하실 내담자를 선택하시면 기본 인적사항(성별, 나이) 입력과 회기별 비공개 임상 메모 타임라인이 활성화됩니다.
+                        내담자가 설문을 제출하면 목록에 자동으로 등록되며, 기본 인적사항과 회기별 비공개 임상 메모를 작성하실 수 있습니다.
                       </p>
                     </div>
                   ) : (
@@ -1593,13 +1672,21 @@ ${sessionDetails}
             <div className="fixed bottom-6 right-6 z-50 animate-bounce">
               <div className="bg-indigo-600 text-white px-5 py-4 rounded-2xl shadow-2xl border-2 border-indigo-400 flex items-center gap-3">
                 <span className="text-2xl">🔔</span>
-                <div>
+                <div
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setSelectedNickname(newArrivalAlert.nickname);
+                    setSelectedSessionId(newArrivalAlert.id);
+                    setNewArrivalAlert(null);
+                  }}
+                  title="클릭 시 해당 내담자의 개인 전이도 및 소견서로 바로 이동"
+                >
                   <div className="font-extrabold text-sm flex items-center gap-1.5">
                     <span>새로운 마음 설문이 도착했습니다!</span>
                     <span className="text-xs bg-indigo-800 px-2 py-0.5 rounded-full">{newArrivalAlert.time}</span>
                   </div>
                   <div className="text-xs text-indigo-100 mt-0.5">
-                    내담자: <strong className="text-amber-300 font-bold">{newArrivalAlert.nickname}</strong>님의 8단계 체인이 실시간 반영되었습니다.
+                    내담자: <strong className="text-amber-300 font-bold">{newArrivalAlert.nickname}</strong>님의 데이터로 즉시 이동 (클릭)
                   </div>
                 </div>
                 <button

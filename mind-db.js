@@ -679,6 +679,57 @@
         });
         return () => {};
       }
+    },
+
+    // 5. 공유 AI 설정 (상담자가 등록한 API 키를 내담자 앱에서도 안전하게 자동 공유)
+    AI: {
+      getApiKey: async () => {
+        // 1순위: 브라우저 로컬 저장소
+        try {
+          const localKey = localStorage.getItem('mind_gemini_api_key');
+          if (localKey && localKey.trim()) return localKey.trim();
+        } catch (e) {}
+
+        // 2순위: 클라우드 DB (Firestore system_config/ai_settings)
+        if (!isFirestoreInitialized) initFirestore();
+        if (isFirestoreInitialized && firestoreDb) {
+          try {
+            const doc = await firestoreDb.collection('system_config').doc('ai_settings').get();
+            if (doc.exists) {
+              const data = doc.data();
+              if (data && data.geminiApiKey) {
+                try { localStorage.setItem('mind_gemini_api_key', data.geminiApiKey); } catch (e) {}
+                return data.geminiApiKey;
+              }
+            }
+          } catch (e) {}
+        }
+        return '';
+      },
+      saveApiKey: async (key) => {
+        const cleaned = (key || '').trim();
+        try {
+          if (cleaned) {
+            localStorage.setItem('mind_gemini_api_key', cleaned);
+          } else {
+            localStorage.removeItem('mind_gemini_api_key');
+          }
+        } catch (e) {}
+
+        if (!isFirestoreInitialized) initFirestore();
+        if (isFirestoreInitialized && firestoreDb) {
+          try {
+            await firestoreDb.collection('system_config').doc('ai_settings').set({
+              geminiApiKey: cleaned,
+              updatedAt: new Date().toISOString()
+            }, { merge: true });
+            console.log('[MindDB AI] Gemini API 키가 클라우드에 동기화되었습니다.');
+          } catch (e) {
+            console.warn('[MindDB AI] 클라우드 키 동기화 실패 (로컬에 보관):', e);
+          }
+        }
+        return true;
+      }
     }
   };
 

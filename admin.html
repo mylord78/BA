@@ -207,11 +207,20 @@
       const [selectedSessionId, setSelectedSessionId] = useState(null);
       const [activeTab, setActiveTab] = useState('report'); // 'report' | 'network' | 'clients'
 
-      // Gemini API 키 (localStorage 저장)
+      // Gemini API 키 (localStorage & 클라우드 연동)
       const [apiKey, setApiKey] = useState(() => localStorage.getItem('mind_gemini_api_key') || '');
       const [isGenerating, setIsGenerating] = useState(false);
       const [llmReport, setLlmReport] = useState('');
       const [lastAnalyzedTarget, setLastAnalyzedTarget] = useState('');
+
+      // 클라우드에 등록된 공유 API 키가 있다면 자동 로드
+      useEffect(() => {
+        if (window.MindDB && window.MindDB.AI) {
+          window.MindDB.AI.getApiKey().then(key => {
+            if (key && key !== apiKey) setApiKey(key);
+          });
+        }
+      }, []);
 
       const svgRef = useRef(null);
 
@@ -1041,17 +1050,22 @@ ${sessionDetails}
 
               <button
                 onClick={() => {
-                  const key = prompt("Google Gemini API 키를 입력하세요 (실시간 임상 AI 소견서 자동 생성용):", apiKey);
+                  const key = prompt("Google Gemini API 키를 입력하세요 (실시간 임상 AI 소견서 및 내담자 편지 공통 연동):", apiKey);
                   if (key !== null) {
-                    setApiKey(key.trim());
-                    localStorage.setItem('mind_gemini_api_key', key.trim());
-                    alert("API 키가 저장되었습니다. 새 분석에 자동 반영됩니다.");
+                    const clean = key.trim();
+                    setApiKey(clean);
+                    localStorage.setItem('mind_gemini_api_key', clean);
+                    if (window.MindDB && window.MindDB.AI) {
+                      window.MindDB.AI.saveApiKey(clean);
+                    }
+                    alert("Gemini API 키가 안전하게 저장되었습니다.\n상담자 소견서와 내담자 편지에 모두 자동 연동됩니다.");
                   }
                 }}
                 className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1"
+                title="상담자 소견서 및 내담자 편지용 공통 Gemini API 키 등록"
               >
                 <span>🔑</span>
-                <span>{apiKey ? 'API 키 설정됨' : 'API 키 등록'}</span>
+                <span>{apiKey ? 'AI 키 연동됨 (전체 공유)' : 'AI 키 등록'}</span>
               </button>
 
               {/* 🔒 화면 잠금(로그아웃) 버튼 */}

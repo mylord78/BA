@@ -57,6 +57,40 @@
     return null;
   }
 
+  // URL에서 내담자 고유 식별 번호(code, cid) 자동 감지 및 로컬 저장
+  function parseClientCodeFromUrl() {
+    try {
+      const hash = window.location.hash || '';
+      const search = window.location.search || '';
+      const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+      
+      let code = params.get('code') || params.get('cid') || params.get('clientCode');
+      
+      if (!code && hash.includes('code=')) {
+        const match = hash.match(/code=([^&]+)/);
+        if (match) code = decodeURIComponent(match[1]);
+      }
+      if (!code && hash.includes('cid=')) {
+        const match = hash.match(/cid=([^&]+)/);
+        if (match) code = decodeURIComponent(match[1]);
+      }
+
+      if (code) {
+        const clean = code.trim();
+        localStorage.setItem('mind_user_client_code', clean);
+        console.log('[MindDB] 초대 링크로부터 내담자 번호를 감지하여 저장했습니다:', clean);
+        return clean;
+      }
+    } catch (e) {
+      console.warn('[MindDB] URL 내담자 번호 파싱 오류:', e);
+    }
+    try {
+      return localStorage.getItem('mind_user_client_code') || '';
+    } catch (e) {
+      return '';
+    }
+  }
+
   // 1. 설정 관리 (우선순위: URL -> firebase-config.js -> localStorage)
   function getEffectiveConfig() {
     // 1순위: URL 파라미터에서 추출한 설정
@@ -323,22 +357,39 @@
       }
     },
 
-    // 내담자 전용 원클릭 접속 링크 생성 (스마트폰/원격 접속용)
-    generateClientInviteUrl: () => {
+    // 내담자 전용 번호 포함 접속 링크 생성 (스마트폰/원격 접속용)
+    generateClientInviteUrl: (clientCode) => {
       const cfg = getEffectiveConfig();
       const currentUrl = window.location.href.split('?')[0].split('#')[0];
       const clientBaseUrl = currentUrl.replace(/admin\.html$/, 'app.html');
       
-      if (!cfg) {
-        return clientBaseUrl;
+      const parts = [];
+      if (clientCode && String(clientCode).trim()) {
+        parts.push(`code=${encodeURIComponent(String(clientCode).trim())}`);
+      }
+      if (cfg) {
+        try {
+          const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(cfg))));
+          parts.push(`cfg=${encodeURIComponent(encoded)}`);
+        } catch (e) {}
       }
 
-      try {
-        const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(cfg))));
-        return `${clientBaseUrl}#cfg=${encodeURIComponent(encoded)}`;
-      } catch (e) {
-        return clientBaseUrl;
+      if (parts.length > 0) {
+        return `${clientBaseUrl}#${parts.join('&')}`;
       }
+      return clientBaseUrl;
+    },
+
+    // 내담자 번호 조회 및 저장
+    getClientCode: () => parseClientCodeFromUrl(),
+    saveClientCode: (code) => {
+      const clean = (code || '').trim();
+      if (clean) {
+        localStorage.setItem('mind_user_client_code', clean);
+      } else {
+        localStorage.removeItem('mind_user_client_code');
+      }
+      return clean;
     },
 
     // 전체 데이터 조회 (상담자용)

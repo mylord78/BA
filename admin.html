@@ -115,6 +115,7 @@
     const INITIAL_CHAINS = [
       {
         id: 1001,
+        clientCode: "C01",
         nickname: "해바라기",
         date: "2026.09.01 14:30",
         sequence: [
@@ -130,6 +131,7 @@
       },
       {
         id: 1002,
+        clientCode: "C01",
         nickname: "해바라기",
         date: "2026.09.02 09:15",
         sequence: [
@@ -145,6 +147,7 @@
       },
       {
         id: 1003,
+        clientCode: "C01",
         nickname: "해바라기",
         date: "2026.09.04 16:40",
         sequence: [
@@ -160,6 +163,7 @@
       },
       {
         id: 2001,
+        clientCode: "C02",
         nickname: "솔바람",
         date: "2026.09.03 11:20",
         sequence: [
@@ -175,6 +179,7 @@
       },
       {
         id: 2002,
+        clientCode: "C02",
         nickname: "솔바람",
         date: "2026.09.05 18:05",
         sequence: [
@@ -186,6 +191,22 @@
           { type: '행동', label: '가볍게 산책하거나 바깥 공기 쐬기' },
           { type: '결과', label: '작은 성취감과 뿌듯함이 남았어요' },
           { type: '긍정대처', label: '좋아하는 음악이나 자연의 소리 듣기' }
+        ]
+      },
+      {
+        id: 3001,
+        clientCode: "C03",
+        nickname: "해바라기",
+        date: "2026.09.06 10:15",
+        sequence: [
+          { type: '컨디션', label: '잠을 푹 자고 몸이 개운했어요' },
+          { type: '계기', label: '해야 할 일이나 약속에 대한 부담감' },
+          { type: '생각', label: "'내가 할 수 있는 것부터 하자'" },
+          { type: '감정', label: '그래도 잘해보고 싶은 작은 희망' },
+          { type: '몸느낌', label: '숨이 고르고 안정되어 있었어요' },
+          { type: '행동', label: '가볍게 산책하거나 바깥 공기 쐬기' },
+          { type: '결과', label: '작은 성취감과 뿌듯함이 남았어요' },
+          { type: '긍정대처', label: '창문을 활짝 열고 3분간 맑은 바깥 공기 마시기' }
         ]
       }
     ];
@@ -203,9 +224,46 @@
       const [passwordError, setPasswordError] = useState('');
 
       const [records, setRecords] = useState(INITIAL_CHAINS);
-      const [selectedNickname, setSelectedNickname] = useState('해바라기');
+
+      // 내담자 고유 식별 키 생성 헬퍼 (번호와 닉네임 조합으로 완벽 격리)
+      const getClientKey = (item) => {
+        if (!item) return '익명';
+        const code = item.clientCode ? String(item.clientCode).trim() : '';
+        const nick = item.nickname ? String(item.nickname).trim() : '익명';
+        return code ? `[${code}] ${nick}` : nick;
+      };
+
+      // 고유 내담자 목록 (번호+닉네임 단위로 완벽 분리 도출)
+      const clientList = useMemo(() => {
+        const map = new Map();
+        records.forEach(r => {
+          const code = r.clientCode ? String(r.clientCode).trim() : '';
+          const nick = r.nickname ? String(r.nickname).trim() : '익명';
+          const key = code ? `[${code}] ${nick}` : nick;
+          if (!map.has(key)) {
+            map.set(key, {
+              key,
+              clientCode: code,
+              nickname: nick,
+              displayName: key
+            });
+          }
+        });
+        return Array.from(map.values());
+      }, [records]);
+
+      const [selectedClientKey, setSelectedClientKey] = useState('[C01] 해바라기');
       const [selectedSessionId, setSelectedSessionId] = useState(null);
       const [activeTab, setActiveTab] = useState('report'); // 'report' | 'network' | 'clients'
+
+      // 현재 선택된 내담자 정보 객체
+      const selectedClient = useMemo(() => {
+        return clientList.find(c => c.key === selectedClientKey) || clientList[0] || null;
+      }, [clientList, selectedClientKey]);
+
+      const selectedNickname = selectedClient ? selectedClient.nickname : '';
+      const selectedClientCode = selectedClient ? selectedClient.clientCode : '';
+      const selectedDisplayName = selectedClient ? selectedClient.displayName : (selectedNickname || '내담자');
 
       // Gemini API 키 (localStorage & 클라우드 연동)
       const [apiKey, setApiKey] = useState(() => localStorage.getItem('mind_gemini_api_key') || '');
@@ -233,7 +291,7 @@
       const [newArrivalAlert, setNewArrivalAlert] = useState(null); // 실시간 수신 알림 토스트
       const prevRecordCountRef = useRef(null);
 
-      // 상담자 전용 비공개 내담자 프로필 & 메모 상태 (내담자 앱에 비노출)
+      // 상담자 전용 비공개 내담자 프로필 & 메모 상태 (내담자 앱에 비노출, clientKey 단위 격리)
       const [profiles, setProfiles] = useState({});
       const [notes, setNotes] = useState([]);
       const [profileGender, setProfileGender] = useState('미지정');
@@ -284,9 +342,9 @@
             // 신규 데이터 수신 감지 (최초 로드 이후 개수 증가 시)
             if (prevRecordCountRef.current !== null && list.length > prevRecordCountRef.current) {
               const latest = list[0];
-              const nick = latest ? (latest.nickname || '익명 내담자') : '내담자';
+              const disp = latest ? getClientKey(latest) : '신규 내담자';
               setNewArrivalAlert({
-                nickname: nick,
+                nickname: disp,
                 time: new Date().toLocaleTimeString(),
                 id: latest ? latest.id : Date.now()
               });
@@ -318,17 +376,17 @@
 
       // 내담자 데이터 로드/갱신 시 개별 내담자 자동 선택 (철저한 1:1 개인별 분석 보장)
       useEffect(() => {
-        if (records.length > 0) {
-          const names = Array.from(new Set(records.map(r => r.nickname || '익명')));
-          if (!selectedNickname || selectedNickname === 'ALL' || !names.includes(selectedNickname)) {
-            setSelectedNickname(names[0]);
+        if (clientList.length > 0) {
+          const keys = clientList.map(c => c.key);
+          if (!selectedClientKey || selectedClientKey === 'ALL' || !keys.includes(selectedClientKey)) {
+            setSelectedClientKey(keys[0]);
             setSelectedSessionId(null);
           }
         } else {
-          setSelectedNickname('');
+          setSelectedClientKey('');
           setSelectedSessionId(null);
         }
-      }, [records]);
+      }, [clientList]);
 
       // 1. 상담자 전용 내담자 프로필 실시간 구독
       useEffect(() => {
@@ -340,9 +398,9 @@
         };
       }, []);
 
-      // 2. 선택된 내담자 변경 시 프로필 폼 상태 동기화 및 메모 실시간 구독
+      // 2. 선택된 내담자 변경 시 프로필 폼 상태 동기화 및 메모 실시간 구독 (clientKey 기준 격리)
       useEffect(() => {
-        if (!selectedNickname) {
+        if (!selectedClientKey) {
           setNotes([]);
           setProfileGender('미지정');
           setProfileAge('');
@@ -351,14 +409,14 @@
           return;
         }
 
-        const p = profiles[selectedNickname];
+        const p = profiles[selectedClientKey];
         if (p) {
           setProfileGender(p.gender || '미지정');
           setProfileAge(p.age || '');
           setProfileIntakeDate(p.intakeDate || '');
           setProfileConcern(p.primaryConcern || '');
         } else {
-          MindDB.Profile.get(selectedNickname).then(fetched => {
+          MindDB.Profile.get(selectedClientKey).then(fetched => {
             if (fetched) {
               setProfileGender(fetched.gender || '미지정');
               setProfileAge(fetched.age || '');
@@ -373,25 +431,27 @@
           });
         }
 
-        const unsubNotes = MindDB.Notes.subscribe(selectedNickname, (list) => {
+        const unsubNotes = MindDB.Notes.subscribe(selectedClientKey, (list) => {
           setNotes(list || []);
         });
 
         return () => {
           if (typeof unsubNotes === 'function') unsubNotes();
         };
-      }, [selectedNickname, profiles]);
+      }, [selectedClientKey, profiles]);
 
       // 내담자 기본정보 (성별, 나이 등) 저장 핸들러
       const handleSaveProfile = async (e) => {
         if (e) e.preventDefault();
-        if (!selectedNickname) {
+        if (!selectedClientKey) {
           alert("먼저 좌측에서 특정 내담자를 선택해 주세요.");
           return;
         }
         setIsSavingProfile(true);
         try {
           const updated = {
+            clientKey: selectedClientKey,
+            clientCode: selectedClientCode,
             nickname: selectedNickname,
             gender: profileGender,
             age: profileAge ? Number(profileAge) : '',
@@ -400,17 +460,17 @@
             updatedAt: new Date().toISOString()
           };
           await MindDB.Profile.save(updated);
-          setProfiles(prev => ({ ...prev, [selectedNickname]: updated }));
-          alert(`[${selectedNickname}] 님의 기본 정보가 클라우드 DB에 안전하게 저장되었습니다.\n(내담자 앱에는 노출되지 않는 비밀 정보입니다)`);
+          setProfiles(prev => ({ ...prev, [selectedClientKey]: updated }));
+          alert(`[${selectedDisplayName}] 님의 기본 정보가 클라우드 DB에 안전하게 저장되었습니다.\n(내담자 앱에는 노출되지 않는 비밀 정보입니다)`);
         } finally {
           setIsSavingProfile(false);
         }
       };
 
-      // 새 임상 메모 등록 핸들러
+      // 새 임상 메모 등록 핸들러 (clientKey 단위 격리 보관)
       const handleAddNote = async (e) => {
         e.preventDefault();
-        if (!selectedNickname) {
+        if (!selectedClientKey) {
           alert("먼저 메모를 작성할 내담자를 좌측에서 선택해 주세요.");
           return;
         }
@@ -426,6 +486,8 @@
 
           const newNote = {
             id: Date.now(),
+            clientKey: selectedClientKey,
+            clientCode: selectedClientCode,
             nickname: selectedNickname,
             category: noteCategory,
             title: noteTitle.trim() || `${now.toLocaleDateString('ko-KR')} 상담 메모`,
@@ -497,11 +559,17 @@
         }
       };
 
-      // 내담자 전용 원클릭 초대 링크 복사
-      const handleCopyClientUrl = () => {
-        const clientUrl = MindDB.generateClientInviteUrl();
+      // 내담자 전용 맞춤 번호 포함 초대 링크 복사
+      const handleCopyClientUrl = (presetCode) => {
+        const defaultCode = (typeof presetCode === 'string' && presetCode)
+          ? presetCode 
+          : (selectedClientCode || 'C01');
+        const code = prompt("내담자에게 부여할 고유 식별 번호(코드)를 입력하세요:\n(예: C01, 101, B2-05 등. 번호가 포함된 전용 접속 링크가 생성됩니다)", defaultCode);
+        if (code === null) return;
+        const trimmed = code.trim();
+        const clientUrl = MindDB.generateClientInviteUrl(trimmed);
         navigator.clipboard.writeText(clientUrl).then(() => {
-          alert("📱 내담자 원클릭 접속 링크가 클립보드에 복사되었습니다!\n\n이 링크를 내담자의 스마트폰이나 개인 PC로 전달하시면, 별도 DB 설정 없이 바로 동일한 클라우드 DB에 연결되어 설문을 제출할 수 있습니다.");
+          alert(`📱 [${trimmed || '일반'}] 번호가 포함된 내담자 맞춤 링크가 클립보드에 복사되었습니다!\n\n${clientUrl}\n\n이 링크로 접속한 내담자는 해당 번호가 브라우저에 자동 각인되며, 동일한 닉네임이 있더라도 별개의 내담자로 완전히 구분되어 기록이 보호됩니다.`);
         }).catch(() => {
           prompt("아래 링크를 복사하여 내담자에게 전달하세요:", clientUrl);
         });
@@ -540,27 +608,26 @@
         }
       };
 
-      // 고유 닉네임 목록 도출
+      // 고유 내담자 식별 키 목록 (하위 호환)
       const nicknames = useMemo(() => {
-        const set = new Set(records.map(r => r.nickname || '익명'));
-        return Array.from(set);
-      }, [records]);
+        return clientList.map(c => c.key);
+      }, [clientList]);
 
-      // 선택된 내담자 1인의 세션 기록 목록 (철저한 개인별 격리)
+      // 선택된 내담자 1인의 세션 기록 목록 (철저한 개인별 격리: clientKey 일치)
       const filteredRecords = useMemo(() => {
-        if (!selectedNickname) return [];
-        return records.filter(r => (r.nickname || '익명') === selectedNickname);
-      }, [records, selectedNickname]);
+        if (!selectedClientKey) return [];
+        return records.filter(r => getClientKey(r) === selectedClientKey);
+      }, [records, selectedClientKey]);
 
       // 현재 분석 대상 세션(선택된 내담자의 특정 세션 or 선택된 내담자의 전체 누적 세션)
       const targetChains = useMemo(() => {
-        if (!selectedNickname) return [];
+        if (!selectedClientKey) return [];
         if (selectedSessionId) {
           const found = filteredRecords.filter(r => r.id === selectedSessionId);
           return found.length > 0 ? found : filteredRecords;
         }
         return filteredRecords;
-      }, [filteredRecords, selectedSessionId, selectedNickname]);
+      }, [filteredRecords, selectedSessionId, selectedClientKey]);
 
       // 네트워크 통계 지표 계산
       const metrics = useMemo(() => {
@@ -739,30 +806,30 @@
       };
 
       // ==========================================
-      // ★ 연구자/상담사용 LLM 개인별 자동 심층 소견서 엔진
+      // ★ 연구자/상담사용 LLM 개인별 자동 심층 소견서 엔진 (내담자 번호+닉네임 개별화)
       // ==========================================
       const generateResearcherReport = async () => {
-        if (targetChains.length === 0 || !selectedNickname) return;
+        if (targetChains.length === 0 || !selectedClientKey) return;
 
         setIsGenerating(true);
         const isSingleSession = !!selectedSessionId;
         const targetDesc = isSingleSession 
-          ? `[${selectedNickname} 님] 단일 회기 세션 (ID: #${selectedSessionId})` 
-          : `[${selectedNickname} 님] 개인 누적 ${targetChains.length}회기 종합 데이터`;
+          ? `[${selectedDisplayName} 님] 단일 회기 세션 (ID: #${selectedSessionId})` 
+          : `[${selectedDisplayName} 님] 개인 누적 ${targetChains.length}회기 종합 데이터`;
         setLastAnalyzedTarget(targetDesc);
 
         // 내담자 세션 데이터 요약 스트링
         const sessionDetails = targetChains.map((c, i) => 
-          `[회기 ${i + 1}] 일시: ${c.date} | 내담자: ${selectedNickname}\n` +
+          `[회기 ${i + 1}] 일시: ${c.date} | 내담자: ${selectedDisplayName}\n` +
           (c.sequence || []).map(s => `  - (${s.type}) ${s.label}`).join('\n')
         ).join('\n\n');
 
         const cleanKey = apiKey.trim();
 
-        const clientProfile = profiles[selectedNickname] || null;
+        const clientProfile = profiles[selectedClientKey] || null;
         const profileInfoStr = clientProfile 
-          ? `내담자 [${selectedNickname} 님]: 성별 ${clientProfile.gender || '미지정'}, 만 ${clientProfile.age ? clientProfile.age + '세' : '연령 미상'}${clientProfile.primaryConcern ? ' (주호소: ' + clientProfile.primaryConcern + ')' : ''}`
-          : `내담자 [${selectedNickname} 님] (개인 인적사항 미입력)`;
+          ? `내담자 [${selectedDisplayName} 님]: 성별 ${clientProfile.gender || '미지정'}, 만 ${clientProfile.age ? clientProfile.age + '세' : '연령 미상'}${clientProfile.primaryConcern ? ' (주호소: ' + clientProfile.primaryConcern + ')' : ''}`
+          : `내담자 [${selectedDisplayName} 님] (개인 인적사항 미입력)`;
 
         // Gemini API 키가 있는 경우: 실제 실시간 LLM 개인별 자동 생성
         if (cleanKey) {
@@ -772,8 +839,8 @@
               : `본 분석은 내담자의 [누적 ${targetChains.length}개 회기]에 대한 종단적 상태 전이 네트워크 및 시계열 변화 궤적(Longitudinal Trajectory) 종합 소견서입니다. 회기간 행동 패턴의 변화, 중심 허브 노드, TRAP/TRAC 전환 가능성을 종합 규명하세요.`;
 
             const prompt = `당신은 행동활성화(Behavioral Activation, BA) 및 네트워크 심리측정학(Network Psychometrics) 분야의 권위 있는 수석 임상심리학자 겸 연구책임자입니다.
-다음 내담자([${selectedNickname} 님])의 실제 개인 상태 전이 데이터 및 인적 프로필을 정밀 분석하고, 학술 연구 및 임상 사례보고서 수준의 [개인별 동적 상태 전이 네트워크 및 수반성 평가 소견서]를 작성해 주세요.
-(중요 원칙: 본 소견서는 개인 맞춤형(idiographic) 임상 보고서입니다. 타인의 데이터나 일반론을 섞지 말고 오직 [${selectedNickname} 님]의 고유한 수반성 데이터와 행동 연쇄에만 집중하여 작성하십시오.)
+다음 내담자([${selectedDisplayName} 님])의 실제 개인 상태 전이 데이터 및 인적 프로필을 정밀 분석하고, 학술 연구 및 임상 사례보고서 수준의 [개인별 동적 상태 전이 네트워크 및 수반성 평가 소견서]를 작성해 주세요.
+(중요 원칙: 본 소견서는 개인 맞춤형(idiographic) 임상 보고서입니다. 타인의 데이터나 일반론을 섞지 말고 오직 [${selectedDisplayName} 님]의 고유한 수반성 데이터와 행동 연쇄에만 집중하여 작성하십시오.)
 
 [내담자 데이터 세부 내역]
 분석 모드: ${promptContext}
@@ -792,7 +859,7 @@ ${sessionDetails}
 - 긍정적 대처 자원 노드(Positive Coping Resource): ${metrics.topPositiveCoping}
 - 최다 빈도 전이 엣지: ${metrics.topTransition}
 
-[작성 가이드라인 - ${selectedNickname} 님의 실제 데이터를 철저히 기반으로 서술할 것]
+[작성 가이드라인 - ${selectedDisplayName} 님의 실제 데이터를 철저히 기반으로 서술할 것]
 1. TRAP 모델 기반 동적 부적 강화 수반성 (Negative Reinforcement Contingency) 분석
 2. 최적 중재 지점 (Targeted Circuit-Breaking Disruption Point) 및 인지/신체 개입 우선순위
 3. TRAC 모델 기반 긍정적 대처 자원 [${metrics.topPositiveCoping}]의 미세 행동 활성화(Micro-Activation) 전략
@@ -844,7 +911,7 @@ ${sessionDetails}
 > **분석 대상**: 단일 회기 #${single.id} | 일시: ${single.date}
 
 ## 1. 선행사건 및 기저 취약성 평가 (Antecedent & Vulnerability Analysis)
-본 회기에서 내담자 [${selectedNickname} 님]은 기저 컨디션인 **[${sCondition}]** 상태에서 주 촉발 계기인 **[${sTrigger}]**을(를) 경험하였습니다.
+본 회기에서 내담자 [${selectedDisplayName} 님]은 기저 컨디션인 **[${sCondition}]** 상태에서 주 촉발 계기인 **[${sTrigger}]**을(를) 경험하였습니다.
 - **선행 자극의 기능**: 신체적·심리적 고갈 상태(${sCondition})는 자율신경계 반응 역치를 현저히 저하시켰으며, 촉발 사건(${sTrigger})이 인지적 위협(Cognitive Threat)으로 급격히 전환되는 결정적 선행 조건(Setting Event)으로 작용하였습니다.
 
 ## 2. 유기체 내적 반응의 삼원 상호작용 (Cognitive-Affective-Somatic Triad)
@@ -878,7 +945,7 @@ ${sessionDetails}
 > **분석 범위**: ${earliestDate} ~ ${latestDate} (누적 ${metrics.totalChains}개 회기 종합, 고유 상태 노드 N=${metrics.totalNodes}개)
 
 ## 1. 다회기 상태 전이 네트워크 구조 및 핵심 기폭 노드(Ignition Node) 분석
-내담자 [${selectedNickname} 님]의 개인 상태 전이 네트워크를 정밀 분석한 결과, 네트워크를 점화시키는 최대 출차수 기폭제(Ignition Node)는 **[${metrics.ignitionNode}]**이며, 주 취약 정서 및 신체 반응은 **[${metrics.topEmotion}]**과 **[${metrics.topBody}]**로 확인되었습니다.
+내담자 [${selectedDisplayName} 님]의 개인 상태 전이 네트워크를 정밀 분석한 결과, 네트워크를 점화시키는 최대 출차수 기폭제(Ignition Node)는 **[${metrics.ignitionNode}]**이며, 주 취약 정서 및 신체 반응은 **[${metrics.topEmotion}]**과 **[${metrics.topBody}]**로 확인되었습니다.
 - **중심 회피 허브 (Central Avoidance Hub)**: 내담자의 스트레스 연쇄는 높은 조건부 전이 확률로 중심 허브 행동인 **[${metrics.topBottleneck}]**(으)로 강력하게 수렴하고 있습니다.
 - **최빈 전이 엣지 (Core Trajectory Pathway)**: **[${metrics.topTransition}]** 경로가 가장 높은 가중치(Edge Weight)를 기록하며 악순환의 메인 파이프라인 역할을 수행하고 있습니다.
 
@@ -906,13 +973,13 @@ ${sessionDetails}
 
       // 타겟 체인이나 내담자가 변경되면 리포트 자동 생성 트리거
       useEffect(() => {
-        if (targetChains.length > 0 && selectedNickname) {
+        if (targetChains.length > 0 && selectedClientKey) {
           generateResearcherReport();
         } else {
           setLlmReport('');
           setLastAnalyzedTarget('');
         }
-      }, [selectedNickname, selectedSessionId, targetChains]);
+      }, [selectedClientKey, selectedSessionId, targetChains]);
 
       // 클립보드 복사
       const copyReport = () => {
@@ -1089,64 +1156,89 @@ ${sessionDetails}
                   <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
                     👤 내담자 선택 (1:1 개인 분석)
                   </span>
-                  <span className="px-1.5 py-0.5 bg-indigo-950 text-indigo-300 border border-indigo-800 rounded text-[10px] font-bold">
-                    총 {nicknames.length}명
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleCopyClientUrl()}
+                      className="px-1.5 py-0.5 bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 border border-indigo-700 rounded text-[10px] font-bold touch-btn flex items-center gap-0.5"
+                      title="새 번호가 포함된 내담자 초대 링크 발급"
+                    >
+                      <span>+ 링크</span>
+                    </button>
+                    <span className="px-1.5 py-0.5 bg-indigo-950 text-indigo-300 border border-indigo-800 rounded text-[10px] font-bold">
+                      총 {clientList.length}명
+                    </span>
+                  </div>
                 </div>
 
-                {nicknames.length === 0 ? (
+                {clientList.length === 0 ? (
                   <div className="p-3 bg-slate-800/60 border border-slate-700 rounded-xl text-center text-xs text-slate-400">
                     수신된 내담자 기록이 없습니다.
                   </div>
                 ) : (
                   <select
-                    value={selectedNickname}
+                    value={selectedClientKey}
                     onChange={(e) => {
-                      setSelectedNickname(e.target.value);
+                      setSelectedClientKey(e.target.value);
                       setSelectedSessionId(null);
                     }}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs sm:text-sm font-bold text-white focus:outline-none focus:border-indigo-500 shadow-sm"
                   >
-                    {nicknames.map(name => {
-                      const count = records.filter(r => (r.nickname || '익명') === name).length;
-                      const p = profiles[name];
+                    {clientList.map(c => {
+                      const count = records.filter(r => getClientKey(r) === c.key).length;
+                      const p = profiles[c.key];
                       const meta = [];
                       if (p && p.age) meta.push(`${p.age}세`);
                       if (p && p.gender && p.gender !== '미지정') meta.push(p.gender);
                       const metaStr = meta.length > 0 ? ` [${meta.join('/')}]` : '';
                       return (
-                        <option key={name} value={name}>👤 {name}{metaStr} ({count}회기 기록)</option>
+                        <option key={c.key} value={c.key}>👤 {c.displayName}{metaStr} ({count}회기 기록)</option>
                       );
                     })}
                   </select>
                 )}
 
-                {selectedNickname && (
-                  <div className="mt-2.5 p-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-xs space-y-1">
+                {selectedClientKey && (
+                  <div className="mt-2.5 p-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-xs space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-indigo-300">
-                        {selectedNickname} {profiles[selectedNickname]?.age ? `(${profiles[selectedNickname].age}세` : ''}{profiles[selectedNickname]?.gender && profiles[selectedNickname].gender !== '미지정' ? `/${profiles[selectedNickname].gender})` : (profiles[selectedNickname]?.age ? ')' : '')}
-                      </span>
-                      <button
-                        onClick={() => setActiveTab('clients')}
-                        className="text-[11px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1"
-                        title="내담자 기본정보 및 임상 메모 탭으로 이동"
-                      >
-                        <span>📝 메모/정보</span>
-                        <span className="bg-amber-950/80 border border-amber-800 px-1 rounded text-[10px] text-amber-300 font-mono">{notes.length}건</span>
-                      </button>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {selectedClientCode && (
+                          <span className="px-1.5 py-0.5 bg-indigo-900 border border-indigo-700 text-indigo-200 text-[10px] font-black rounded-md shrink-0">
+                            {selectedClientCode}
+                          </span>
+                        )}
+                        <span className="font-bold text-indigo-300 truncate">
+                          {selectedNickname} {profiles[selectedClientKey]?.age ? `(${profiles[selectedClientKey].age}세` : ''}{profiles[selectedClientKey]?.gender && profiles[selectedClientKey].gender !== '미지정' ? `/${profiles[selectedClientKey].gender})` : (profiles[selectedClientKey]?.age ? ')' : '')}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => handleCopyClientUrl(selectedClientCode)}
+                          className="text-[10px] px-2 py-0.5 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 rounded border border-indigo-700 font-bold touch-btn"
+                          title="이 내담자 번호가 포함된 전용 초대 링크 복사"
+                        >
+                          📱 링크
+                        </button>
+                        <button
+                          onClick={() => setActiveTab('clients')}
+                          className="text-[10px] px-2 py-0.5 bg-amber-950/80 hover:bg-amber-900 text-amber-300 rounded border border-amber-800 font-bold flex items-center gap-0.5 touch-btn"
+                          title="내담자 기본정보 및 임상 메모 탭으로 이동"
+                        >
+                          <span>📝</span>
+                          <span className="font-mono">{notes.length}</span>
+                        </button>
+                      </div>
                     </div>
-                    {profiles[selectedNickname]?.primaryConcern ? (
+                    {profiles[selectedClientKey]?.primaryConcern ? (
                       <div className="text-[11px] text-slate-400 truncate">
-                        주호소: {profiles[selectedNickname].primaryConcern}
+                        주호소: {profiles[selectedClientKey].primaryConcern}
                       </div>
                     ) : (
                       <div className="text-[10px] text-slate-500 italic">
                         인적사항 미기재 (우측 탭에서 입력 가능)
                       </div>
                     )}
-                    <div className="pt-1 text-[10px] text-emerald-400 font-medium flex items-center gap-1">
-                      <span>✓</span> <span>타 내담자 데이터 혼합 없는 1:1 개인 전이도/소견서</span>
+                    <div className="pt-0.5 text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                      <span>✓</span> <span>동일 닉네임과 혼동 없는 1:1 고유 식별 격리</span>
                     </div>
                   </div>
                 )}
@@ -1378,7 +1470,7 @@ ${sessionDetails}
                         <div className="py-16 flex flex-col items-center justify-center space-y-3">
                           <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
                           <p className="text-sm font-bold text-indigo-300">
-                            {apiKey ? `Gemini 임상 LLM이 [${selectedNickname} 님]의 학술 소견서를 작성 중입니다...` : `[${selectedNickname} 님]의 네트워크 전이 수반성을 분석하여 개인 맞춤 소견서를 자동 생성하고 있습니다...`}
+                            {apiKey ? `Gemini 임상 LLM이 [${selectedDisplayName} 님]의 학술 소견서를 작성 중입니다...` : `[${selectedDisplayName} 님]의 네트워크 전이 수반성을 분석하여 개인 맞춤 소견서를 자동 생성하고 있습니다...`}
                           </p>
                         </div>
                       ) : (
@@ -1398,7 +1490,7 @@ ${sessionDetails}
                     <div className="flex items-center gap-2">
                       <span className="text-base">🕸️</span>
                       <span className="text-sm font-black text-white">
-                        [{selectedNickname || '내담자'} 님] 개인 상태 전이 네트워크 지도
+                        [{selectedDisplayName} 님] 개인 상태 전이 네트워크 지도
                       </span>
                       <span className="px-2 py-0.5 bg-indigo-900/80 text-indigo-300 border border-indigo-700 rounded-md text-[11px] font-bold">
                         {selectedSessionId ? `단일 회기 (#${selectedSessionId})` : `누적 ${targetChains.length}회기 전이도`}
@@ -1425,7 +1517,7 @@ ${sessionDetails}
                       <span className="text-4xl block">🕸️</span>
                       <h3 className="text-base font-bold text-slate-200">표시할 전이도 데이터가 없습니다</h3>
                       <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-                        {selectedNickname ? `[${selectedNickname} 님]의 세션 기록이 없습니다.` : '좌측에서 내담자를 선택해 주세요.'}
+                        {selectedClientKey ? `[${selectedDisplayName} 님]의 세션 기록이 없습니다.` : '좌측에서 내담자를 선택해 주세요.'}
                       </p>
                     </div>
                   ) : (
@@ -1453,7 +1545,7 @@ ${sessionDetails}
                     </div>
                   </div>
 
-                  {!selectedNickname ? (
+                  {!selectedClientKey ? (
                     <div className="p-12 text-center bg-slate-900 rounded-3xl border border-slate-800 space-y-3">
                       <span className="text-4xl block">👤</span>
                       <h3 className="text-base font-bold text-slate-200">등록된 내담자가 없습니다</h3>
@@ -1470,12 +1562,23 @@ ${sessionDetails}
                             <div className="flex items-center gap-2">
                               <span className="text-xl">📋</span>
                               <h3 className="font-bold text-white text-base">
-                                <strong className="text-indigo-400">{selectedNickname}</strong> 님 기본 정보
+                                <strong className="text-indigo-400">{selectedDisplayName}</strong> 님 기본 정보
                               </h3>
                             </div>
-                            <span className="px-2 py-0.5 bg-slate-800 text-indigo-300 text-[11px] rounded-md font-mono border border-slate-700">
-                              비공개 보관
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleCopyClientUrl(selectedClientCode)}
+                                className="px-2.5 py-1 bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 border border-indigo-700 rounded-lg text-xs font-bold flex items-center gap-1 touch-btn"
+                                title="이 내담자 번호가 포함된 전용 초대 링크 복사"
+                              >
+                                <span>📱</span>
+                                <span>{selectedClientCode ? `[${selectedClientCode}] 링크 복사` : '초대 링크 복사'}</span>
+                              </button>
+                              <span className="px-2 py-0.5 bg-slate-800 text-indigo-300 text-[11px] rounded-md font-mono border border-slate-700">
+                                비공개 보관
+                              </span>
+                            </div>
                           </div>
 
                           <form onSubmit={handleSaveProfile} className="space-y-3.5 text-xs">

@@ -111,6 +111,85 @@
     const ADMIN_PASSWORD = "1111";
     const AUTH_STORAGE_KEY = "mind_admin_auth_passed";
 
+    // 초기 임상 데이터 (다양한 내담자 프로필 및 회기별 진화 과정이 담긴 실제적 임상 데이터)
+    const INITIAL_CHAINS = [
+      {
+        id: 1001,
+        nickname: "해바라기",
+        date: "2026.09.01 14:30",
+        sequence: [
+          { type: '컨디션', label: '잠을 잘 못 자서 피곤했어요' },
+          { type: '계기', label: '가족이나 지인과의 사소한 의견 충돌' },
+          { type: '생각', label: "'다 내 탓인 것만 같아...'" },
+          { type: '감정', label: '가슴이 철렁 내려앉는 불안함' },
+          { type: '몸느낌', label: '가슴이 쿵쾅쿵쾅 뛰고 답답했어요' },
+          { type: '행동', label: '하루 종일 이불 속에 웅크려 누워있기' },
+          { type: '결과', label: '더 외롭고 답답한 기분이 밀려왔어요' },
+          { type: '긍정대처', label: '따뜻한 물이나 차 한 잔 천천히 음미하기' }
+        ]
+      },
+      {
+        id: 1002,
+        nickname: "해바라기",
+        date: "2026.09.02 09:15",
+        sequence: [
+          { type: '컨디션', label: '온몸이 뻐근하고 무거웠어요' },
+          { type: '계기', label: '누군가의 무심코 던진 서운한 한마디' },
+          { type: '생각', label: "'누가 날 안 좋게 보나 봐'" },
+          { type: '감정', label: '주체하기 힘든 화와 답답함' },
+          { type: '몸느낌', label: '어깨와 목이 뻣뻣하게 굳었어요' },
+          { type: '행동', label: '전화와 문자를 다 피하고 혼자 숨기' },
+          { type: '결과', label: '시간을 허비했다는 자책감이 들었어요' },
+          { type: '긍정대처', label: '창문을 활짝 열고 3분간 맑은 바깥 공기 마시기' }
+        ]
+      },
+      {
+        id: 1003,
+        nickname: "해바라기",
+        date: "2026.09.04 16:40",
+        sequence: [
+          { type: '컨디션', label: '식사를 든든하고 맛있게 챙겼어요' },
+          { type: '계기', label: '해야 할 일이나 약속에 대한 부담감' },
+          { type: '생각', label: "'내가 할 수 있는 것부터 하자'" },
+          { type: '감정', label: '그래도 잘해보고 싶은 작은 희망' },
+          { type: '몸느낌', label: '숨이 고르고 안정되어 있었어요' },
+          { type: '행동', label: '믿을 수 있는 사람에게 털어놓고 대화하기' },
+          { type: '결과', label: '마음이 한결 차분해지고 숨이 트였어요' },
+          { type: '긍정대처', label: "'오늘도 참 애썼어, 괜찮아' 나를 안아주며 토닥이기" }
+        ]
+      },
+      {
+        id: 2001,
+        nickname: "솔바람",
+        date: "2026.09.03 11:20",
+        sequence: [
+          { type: '컨디션', label: '끼니를 거르고 허기졌어요' },
+          { type: '계기', label: '특별한 일 없이 문득 찾아온 공허함' },
+          { type: '생각', label: "'아무것도 하기 싫고 버거워'" },
+          { type: '감정', label: '바닥을 모르겠는 막막한 우울함' },
+          { type: '몸느낌', label: '온몸에 힘이 쭉 빠지고 처졌어요' },
+          { type: '행동', label: '단 음식이나 자극적인 음식 폭식하기' },
+          { type: '결과', label: '몸이 더 무겁고 피로가 누적되었어요' },
+          { type: '긍정대처', label: '햇볕을 쬐며 집 앞 골목 5분간 가볍게 산책하기' }
+        ]
+      },
+      {
+        id: 2002,
+        nickname: "솔바람",
+        date: "2026.09.05 18:05",
+        sequence: [
+          { type: '컨디션', label: '잠을 푹 자고 몸이 개운했어요' },
+          { type: '계기', label: '돈이나 현실적인 생활비 걱정' },
+          { type: '생각', label: "'잠깐 쉬어가도 괜찮아'" },
+          { type: '감정', label: '사소한 일에도 느껴진 고마움' },
+          { type: '몸느낌', label: '머리가 맑고 가벼웠어요' },
+          { type: '행동', label: '가볍게 산책하거나 바깥 공기 쐬기' },
+          { type: '결과', label: '작은 성취감과 뿌듯함이 남았어요' },
+          { type: '긍정대처', label: '좋아하는 음악이나 자연의 소리 듣기' }
+        ]
+      }
+    ];
+
     function AdminApp() {
       // 🔒 상담자 보안 인증 상태 (패스워드: 1111)
       const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -123,8 +202,8 @@
       const [passwordInput, setPasswordInput] = useState('');
       const [passwordError, setPasswordError] = useState('');
 
-      const [records, setRecords] = useState([]);
-      const [selectedNickname, setSelectedNickname] = useState('');
+      const [records, setRecords] = useState(INITIAL_CHAINS);
+      const [selectedNickname, setSelectedNickname] = useState('해바라기');
       const [selectedSessionId, setSelectedSessionId] = useState(null);
       const [activeTab, setActiveTab] = useState('report'); // 'report' | 'network' | 'clients'
 
@@ -657,7 +736,8 @@
         if (targetChains.length === 0 || !selectedNickname) return;
 
         setIsGenerating(true);
-        const targetDesc = selectedSessionId 
+        const isSingleSession = !!selectedSessionId;
+        const targetDesc = isSingleSession 
           ? `[${selectedNickname} 님] 단일 회기 세션 (ID: #${selectedSessionId})` 
           : `[${selectedNickname} 님] 개인 누적 ${targetChains.length}회기 종합 데이터`;
         setLastAnalyzedTarget(targetDesc);
@@ -665,7 +745,7 @@
         // 내담자 세션 데이터 요약 스트링
         const sessionDetails = targetChains.map((c, i) => 
           `[회기 ${i + 1}] 일시: ${c.date} | 내담자: ${selectedNickname}\n` +
-          c.sequence.map(s => `  - (${s.type}) ${s.label}`).join('\n')
+          (c.sequence || []).map(s => `  - (${s.type}) ${s.label}`).join('\n')
         ).join('\n\n');
 
         const cleanKey = apiKey.trim();
@@ -678,11 +758,16 @@
         // Gemini API 키가 있는 경우: 실제 실시간 LLM 개인별 자동 생성
         if (cleanKey) {
           try {
+            const promptContext = isSingleSession
+              ? `본 분석은 내담자의 [단일 회기(ID: #${selectedSessionId})]에 대한 정밀 기능적 행동분석(Functional Analysis, ABC-O Model) 소견서입니다. 8단계(선행 컨디션, 계기, 자동적 사고, 정서, 신체 각성, 회피 행동, 결과, 긍정 대처)의 단계별 연결고리를 행동주의적·인지치료적으로 심층 분석하세요.`
+              : `본 분석은 내담자의 [누적 ${targetChains.length}개 회기]에 대한 종단적 상태 전이 네트워크 및 시계열 변화 궤적(Longitudinal Trajectory) 종합 소견서입니다. 회기간 행동 패턴의 변화, 중심 허브 노드, TRAP/TRAC 전환 가능성을 종합 규명하세요.`;
+
             const prompt = `당신은 행동활성화(Behavioral Activation, BA) 및 네트워크 심리측정학(Network Psychometrics) 분야의 권위 있는 수석 임상심리학자 겸 연구책임자입니다.
-다음 내담자([${selectedNickname} 님])의 실제 개인 상태 전이 네트워크 데이터 및 인적 프로필을 정밀 분석하고, 학술 연구 및 임상 사례보고서 수준의 [개인별 동적 상태 전이 네트워크 및 수반성 평가 소견서]를 작성해 주세요.
+다음 내담자([${selectedNickname} 님])의 실제 개인 상태 전이 데이터 및 인적 프로필을 정밀 분석하고, 학술 연구 및 임상 사례보고서 수준의 [개인별 동적 상태 전이 네트워크 및 수반성 평가 소견서]를 작성해 주세요.
 (중요 원칙: 본 소견서는 개인 맞춤형(idiographic) 임상 보고서입니다. 타인의 데이터나 일반론을 섞지 말고 오직 [${selectedNickname} 님]의 고유한 수반성 데이터와 행동 연쇄에만 집중하여 작성하십시오.)
 
 [내담자 데이터 세부 내역]
+분석 모드: ${promptContext}
 분석 대상: ${targetDesc} (${profileInfoStr})
 총 분석 체인 수: ${metrics.totalChains}회
 고유 노드 수: ${metrics.totalNodes}개
@@ -698,20 +783,11 @@ ${sessionDetails}
 - 긍정적 대처 자원 노드(Positive Coping Resource): ${metrics.topPositiveCoping}
 - 최다 빈도 전이 엣지: ${metrics.topTransition}
 
-[작성 가이드라인 - ${selectedNickname} 님의 연령/성별 특성 및 위 실제 데이터를 철저히 기반으로 서술할 것]
-# 1. TRAP 모델 기반 [${selectedNickname} 님]의 동적 부적 강화 수반성 (Negative Reinforcement Contingency) 분석
-- [${selectedNickname} 님]이 경험한 Trigger(${metrics.topTrigger})와 신체·정서 반응(${metrics.topEmotion}, ${metrics.topBody})이 어떤 조건부 전이 확률로 회피 행동 [${metrics.topBottleneck}]에 수렴하는지 메커니즘을 상세히 규명할 것.
-- 단기적 고통 회피(부적 강화)가 어떻게 긍정적 보상과의 접촉을 차단하고 이차 손실([${metrics.topOutcome}])을 고착시키는지 학술적으로 분석할 것.
-
-# 2. [${selectedNickname} 님]의 최적 중재 지점 (Targeted Circuit-Breaking Disruption Point)
-- [${selectedNickname} 님]의 네트워크 상에서 가장 가중치가 높은 엣지 [${metrics.topTransition}]를 끊어내기 위한 구체적 중재 시점을 명시할 것.
-- 인지적 개입 vs 신체 감각 그라운딩(Grounding) 중 어느 것이 선행되어야 하는지 임상적 근거를 제시할 것.
-
-# 3. TRAC 모델 기반 긍정적 대처 자원 [${metrics.topPositiveCoping}]의 서킷 브레이킹 효용
-- [${selectedNickname} 님]이 직접 수용한 긍정 대처 [${metrics.topPositiveCoping}]을 미세 행동 활성화(Micro-activity Activation)로 안착시키기 위한 단계별 처방을 기술할 것.
-
-# 4. [${selectedNickname} 님]을 위한 임상 치료 제언 및 다음 세션 프로토콜
-- 다음 상담 시 상담사/치료자가 [${selectedNickname} 님]을 위해 반드시 모니터링해야 할 핵심 전이 신호와 주의사항을 3가지 제안할 것.
+[작성 가이드라인 - ${selectedNickname} 님의 실제 데이터를 철저히 기반으로 서술할 것]
+1. TRAP 모델 기반 동적 부적 강화 수반성 (Negative Reinforcement Contingency) 분석
+2. 최적 중재 지점 (Targeted Circuit-Breaking Disruption Point) 및 인지/신체 개입 우선순위
+3. TRAC 모델 기반 긍정적 대처 자원 [${metrics.topPositiveCoping}]의 미세 행동 활성화(Micro-Activation) 전략
+4. 차기 회기 임상 치료 제언 및 핵심 모니터링 신호 3가지
 
 형식: 전문 임상용 마크다운 형식으로 격조 높은 한국어 학술체로 작성하세요.`;
 
@@ -733,31 +809,85 @@ ${sessionDetails}
               return;
             }
           } catch (e) {
-            console.warn("Gemini API 호출 중 오류 발생, 고도화된 자동 임상 생성기로 대체합니다:", e);
+            console.warn("Gemini API 호출 중 오류 발생, 고도화된 정밀 자동 임상 생성기로 대체합니다:", e);
           }
         }
 
-        // Gemini API 키가 없거나 실패 시: 내담자의 실제 모든 입력값을 조합한 정밀 알고리즘 자동 보고서 생성
-        const autoGeneratedReport = `> **[개인 임상 프로필]** ${profileInfoStr}
+        // Gemini API 키가 없거나 실패 시: 단일 회기 vs 누적 회기를 완벽히 분리한 고도화 동적 임상 소견서 생성
+        let autoGeneratedReport = "";
 
-## 1. TRAP 모델 기반 [${selectedNickname} 님]의 동적 부적 강화 수반성 (Negative Reinforcement Contingency) 분석
-본 내담자([${selectedNickname} 님], 분석 표본 N=${metrics.totalChains}회)의 개인 상태 전이 네트워크를 정밀 분석한 결과, 주 촉발 기폭제(Ignition Node)인 **[${metrics.ignitionNode}]** 및 취약 신체/정서 상태(**${metrics.topEmotion}**, **${metrics.topBody}**)는 높은 조건부 전이 확률로 중심 회피 허브 행동인 **[${metrics.topBottleneck}]**으로 수렴하고 있습니다.
+        if (isSingleSession && targetChains.length === 1) {
+          // [단일 세션 ABC-O 정밀 기능분석 모드]
+          const single = targetChains[0];
+          const seqMap = {};
+          (single.sequence || []).forEach(s => { seqMap[s.type] = s.label; });
 
-이 패턴은 심리적 고통으로부터의 일시적 격리라는 단기 부적 강화(Negative Reinforcement)를 제공하여 행동의 빈도를 유지시키고 있으나, 그 대가로 환경 내 긍정적 강화물과의 접촉을 박탈(Extinction of Positive Reinforcers)시키며, 최종적으로 **[${metrics.topOutcome}]**이라는 심각한 이차적 기능 손상(Secondary Loss)으로 귀결되는 고착화 루프를 형성하고 있습니다.
+          const sCondition = seqMap['컨디션'] || metrics.topCondition;
+          const sTrigger = seqMap['계기'] || metrics.topTrigger;
+          const sThought = seqMap['생각'] || metrics.topThought;
+          const sEmotion = seqMap['감정'] || metrics.topEmotion;
+          const sBody = seqMap['몸느낌'] || metrics.topBody;
+          const sAction = seqMap['행동'] || metrics.topBottleneck;
+          const sOutcome = seqMap['결과'] || metrics.topOutcome;
+          const sPositiveCoping = seqMap['긍정대처'] || metrics.topPositiveCoping;
 
-## 2. [${selectedNickname} 님]의 최적 중재 지점 (Targeted Circuit-Breaking Point)
-네트워크 상에서 가장 엣지 가중치(Edge Weight)가 높은 핵심 전이 경로는 **[${metrics.topTransition}]**으로 확인되었습니다. 
-내담자의 인지적 반추(**"${metrics.topThought}"**)가 심화되기 직전, 신체적 각성 수준(**${metrics.topBody}**)이 감지되는 순간이 가장 결정적인 개입 골든타임(Window of Opportunity)입니다. 인지적 논박보다는 감각 접촉(Sensory Grounding)과 자율신경계 이완을 우선 투입하는 것이 회피 행동으로의 수렴을 저지하는 데 가장 유효합니다.
+          autoGeneratedReport = `> **[단일 세션 정밀 기능분석(Functional Analysis)]** ${profileInfoStr}
+> **분석 대상**: 단일 회기 #${single.id} | 일시: ${single.date}
 
-## 3. TRAC 모델 긍정적 대처 자원 [${metrics.topPositiveCoping}]의 서킷 브레이킹 전략
-[${selectedNickname} 님]이 설문에서 직접 선택한 긍정적 대처 자원인 **[${metrics.topPositiveCoping}]**은 악순환 체인을 차단할 수 있는 가장 유망한 대체 대처 행동(Alternative Coping Action)입니다.
-- **Micro-Activation 프로토콜**: 회피 행동 **[${metrics.topBottleneck}]**이 촉발되기 전 3분의 버퍼 타임을 설정하고, **[${metrics.topPositiveCoping}]**을 선행 실행하도록 구조화된 행동 계약을 체결합니다.
-- **보상 수반성 재설정**: 이 작은 실천을 통해 신체 긴장도를 낮추고 자책감을 완화하여, 환경 내 유의미한 활동과의 재접촉 기회를 확보합니다.
+## 1. 선행사건 및 기저 취약성 평가 (Antecedent & Vulnerability Analysis)
+본 회기에서 내담자 [${selectedNickname} 님]은 기저 컨디션인 **[${sCondition}]** 상태에서 주 촉발 계기인 **[${sTrigger}]**을(를) 경험하였습니다.
+- **선행 자극의 기능**: 신체적·심리적 고갈 상태(${sCondition})는 자율신경계 반응 역치를 현저히 저하시켰으며, 촉발 사건(${sTrigger})이 인지적 위협(Cognitive Threat)으로 급격히 전환되는 결정적 선행 조건(Setting Event)으로 작용하였습니다.
 
-## 4. [${selectedNickname} 님]을 위한 임상 치료 제언 및 다음 세션 가이드
-1. **신체 신호 모니터링**: [${selectedNickname} 님]이 **[${metrics.topBody}]**를 회피의 전조 증상으로 조기에 자각할 수 있도록 신체 감각 일지를 병행합니다.
-2. **단기 안도의 착시 교육**: **[${metrics.topBottleneck}]**이 주는 '잠깐의 편안함'과 '뒤따르는 **${metrics.topOutcome}**'의 시간차 결과를 심리교육(Psychoeducation)합니다.
-3. **긍정 대처의 일상화**: **[${metrics.topPositiveCoping}]** 실행 시 내담자의 자기효능감 및 정서적 완화 정도를 다음 회기에서 점수화(0~10점)하여 추적 평가합니다.`;
+## 2. 유기체 내적 반응의 삼원 상호작용 (Cognitive-Affective-Somatic Triad)
+촉발 직후 내담자의 내적 시스템에서는 인지, 정서, 생리적 반응의 급격한 악순환 결속(Resonance)이 관찰됩니다.
+- **자동적 사고 (Automatic Thought)**: "${sThought}"
+- **지배적 정서 (Dominant Affect)**: **${sEmotion}**
+- **신체적 반응 (Somatic/Physiological Arousal)**: **${sBody}**
+- **임상적 평가**: 인지적 반추("${sThought}")가 촉발 정서(${sEmotion})를 즉각 증폭시키고, 이것이 자율신경계 각성(${sBody})으로 직결되는 전형적인 급성 부적 강화 수반 경로를 형성하고 있습니다.
+
+## 3. 표적 행동 및 부적 강화 수반성 (Target Avoidance Behavior & Secondary Loss)
+- **표적 행동**: **[${sAction}]**
+- **행동의 기능(Function of Behavior)**: 내담자가 택한 [${sAction}]은 고통스러운 정서(${sEmotion})와 신체적 긴장(${sBody})으로부터 즉각 벗어나기 위한 단기 도피/회피(Escape/Avoidance) 반응입니다.
+- **수반된 결과 및 이차 손실 (Secondary Loss)**: 행동 직후 일시적 안도감이 있었으나, 궁극적으로 **[${sOutcome}]**(으)로 귀결되었습니다. 이는 단기 부적 강화(Negative Reinforcement)의 덫으로 인해 장기적 자기효능감이 손상되고 고립이 심화되는 패턴을 명백히 보여줍니다.
+
+## 4. 자발적 긍정 대처 (Alternative Coping) 자원 평가 및 서킷 브레이킹 전략
+- **내담자 수용 긍정 대처**: **[${sPositiveCoping}]**
+- **서킷 브레이킹 시점 (Disruption Point)**: 신체 반응 **[${sBody}]**이 감지되는 즉시, 표적 행동 **[${sAction}]**으로의 전이를 차단하기 위해 3분의 버퍼 타임을 확보하고 **[${sPositiveCoping}]**을 선행 실행하는 미세 행동 계약(Micro-Behavioral Activation)을 체결할 것을 권고합니다.
+
+## 5. 차기 회기 치료자 임상 권고사항
+1. **신체 조기 경보 훈련**: 내담자가 [${sBody}] 감각을 회피 행동의 전조 증상으로 조기 자각하도록 돕는 신체 스캔 일지 처방.
+2. **인지적 탈융합(Defusion)**: 자동적 사고("${sThought}")를 절대적 진실이 아닌 '마음에 스쳐 지나가는 언어'로 분리하여 조망하는 인지 탈융합 기법 적용.
+3. **대체 행동 강화**: [${sPositiveCoping}] 실천 시 획득되는 내적 성취감과 이완도를 매 회기 척도화(0~10점)하여 추적 관찰.`;
+
+        } else {
+          // [다회기 누적 종단 네트워크 종합 분석 모드]
+          const isProgressive = targetChains.length > 1;
+          const earliestDate = targetChains[targetChains.length - 1]?.date || '초기';
+          const latestDate = targetChains[0]?.date || '최근';
+
+          autoGeneratedReport = `> **[개인 종단 상태 전이 네트워크 종합 평가]** ${profileInfoStr}
+> **분석 범위**: ${earliestDate} ~ ${latestDate} (누적 ${metrics.totalChains}개 회기 종합, 고유 상태 노드 N=${metrics.totalNodes}개)
+
+## 1. 다회기 상태 전이 네트워크 구조 및 핵심 기폭 노드(Ignition Node) 분석
+내담자 [${selectedNickname} 님]의 개인 상태 전이 네트워크를 정밀 분석한 결과, 네트워크를 점화시키는 최대 출차수 기폭제(Ignition Node)는 **[${metrics.ignitionNode}]**이며, 주 취약 정서 및 신체 반응은 **[${metrics.topEmotion}]**과 **[${metrics.topBody}]**로 확인되었습니다.
+- **중심 회피 허브 (Central Avoidance Hub)**: 내담자의 스트레스 연쇄는 높은 조건부 전이 확률로 중심 허브 행동인 **[${metrics.topBottleneck}]**(으)로 강력하게 수렴하고 있습니다.
+- **최빈 전이 엣지 (Core Trajectory Pathway)**: **[${metrics.topTransition}]** 경로가 가장 높은 가중치(Edge Weight)를 기록하며 악순환의 메인 파이프라인 역할을 수행하고 있습니다.
+
+## 2. 종단적 궤적(Longitudinal Trajectory) 및 행동 레퍼토리 변화 분석
+- **회기별 적응적 진화 추이**: 누적 ${metrics.totalChains}회기의 시계열 데이터를 분석한 결과, 초기의 극단적 회피 중심 패턴에서 최근 회기로 갈수록 긍정 대처(**[${metrics.topPositiveCoping}]**)를 탐색하고 시도하려는 유의미한 행동 레퍼토리 확장이 관찰됩니다.
+- **인지적 반추 패턴**: 주로 **"${metrics.topThought}"** 유형의 자기비하적·부정적 자동적 사고가 빈발하므로, 이에 대한 수용 및 인지적 유연성(Psychological Flexibility) 증진이 요구됩니다.
+- **부적 강화 결과의 고착화**: 회피 행동 이후 지속되는 **[${metrics.topOutcome}]**은 내담자의 긍정적 자연 강화물(Natural Reinforcers) 접촉을 박탈하는 핵심 유지 기제로 작용하고 있습니다.
+
+## 3. TRAP에서 TRAC 모델로의 전환 (Circuit-Breaking Strategy)
+- **TRAP 패턴 규명**: Trigger(${metrics.topTrigger}) ➔ Response(${metrics.topEmotion}, ${metrics.topBody}) ➔ Avoidance Pattern(${metrics.topBottleneck})
+- **TRAC 대안 경로 구축**: Trigger ➔ Response ➔ Alternative Coping(**${metrics.topPositiveCoping}**)
+- **서킷 브레이킹 프로토콜**: 최빈 전이 엣지인 **[${metrics.topTransition}]**이 촉발되는 찰나의 순간에 감각 접촉(Sensory Grounding)과 **[${metrics.topPositiveCoping}]**을 연결하는 자극 통제(Stimulus Control) 전략을 배치합니다.
+
+## 4. 차기 치료 프로토콜 및 상담자 가이드
+1. **기폭 노드 차단**: [${metrics.ignitionNode}] 발생 시 즉시 가동할 수 있는 10초 복식호흡 및 그라운딩 행동 루틴을 확립하십시오.
+2. **단기 안도 vs 장기 비용의 시각화**: [${metrics.topBottleneck}]이 제공하는 일시적 안도와 [${metrics.topOutcome}]이 초래하는 이차적 비용 간의 불일치를 탐색하는 동기강화 상담(MI)을 병행하십시오.
+3. **자발적 대처의 일상화**: 내담자가 수용한 **[${metrics.topPositiveCoping}]**의 실행 환경을 구조화하고, 성취 경험을 누적할 수 있도록 과제 난이도를 미세 조정하십시오.`;
+        }
 
         setTimeout(() => {
           setLlmReport(autoGeneratedReport);

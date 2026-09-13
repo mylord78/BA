@@ -144,21 +144,21 @@
       ]
     };
 
-    // 초기 데이터 (며칠 전 ➔ 정확한 일시로 표시)
+    // 초기 데이터 (다양한 내담자 프로필 및 회기별 진화 과정이 담긴 실제적 임상 데이터)
     const INITIAL_CHAINS = [
       {
         id: 1001,
         nickname: "해바라기",
         date: "2026.09.01 14:30",
         sequence: [
-          { type: '컨디션', label: '잠을 잘 못 잤어요' },
-          { type: '계기', label: '가족과 말다툼' },
-          { type: '생각', label: '다 내 탓이야...' },
-          { type: '감정', label: '가슴 철렁 불안함' },
-          { type: '몸느낌', label: '숨쉬기가 답답해요' },
-          { type: '행동', label: '하루 종일 누워있기' },
-          { type: '결과', label: '더 외롭고 답답해졌어요' },
-          { type: '긍정대처', label: '따뜻한 물/차 한 잔 천천히 마시기' }
+          { type: '컨디션', label: '잠을 잘 못 자서 피곤했어요' },
+          { type: '계기', label: '가족이나 지인과의 사소한 의견 충돌' },
+          { type: '생각', label: "'다 내 탓인 것만 같아...'" },
+          { type: '감정', label: '가슴이 철렁 내려앉는 불안함' },
+          { type: '몸느낌', label: '가슴이 쿵쾅쿵쾅 뛰고 답답했어요' },
+          { type: '행동', label: '하루 종일 이불 속에 웅크려 누워있기' },
+          { type: '결과', label: '더 외롭고 답답한 기분이 밀려왔어요' },
+          { type: '긍정대처', label: '따뜻한 물이나 차 한 잔 천천히 음미하기' }
         ]
       },
       {
@@ -166,14 +166,59 @@
         nickname: "해바라기",
         date: "2026.09.02 09:15",
         sequence: [
-          { type: '컨디션', label: '온몸이 뻐근하고 피곤했어요' },
-          { type: '계기', label: '남의 무심한 한마디' },
-          { type: '생각', label: '아무것도 하기 싫어' },
-          { type: '감정', label: '가슴 철렁 불안함' },
-          { type: '몸느낌', label: '숨쉬기가 답답해요' },
-          { type: '행동', label: '하루 종일 누워있기' },
-          { type: '결과', label: '하루를 날려 자책감이 들어요' },
-          { type: '긍정대처', label: '창문 열고 3분간 바깥 공기 쐬기' }
+          { type: '컨디션', label: '온몸이 뻐근하고 무거웠어요' },
+          { type: '계기', label: '누군가의 무심코 던진 서운한 한마디' },
+          { type: '생각', label: "'누가 날 안 좋게 보나 봐'" },
+          { type: '감정', label: '주체하기 힘든 화와 답답함' },
+          { type: '몸느낌', label: '어깨와 목이 뻣뻣하게 굳었어요' },
+          { type: '행동', label: '전화와 문자를 다 피하고 혼자 숨기' },
+          { type: '결과', label: '시간을 허비했다는 자책감이 들었어요' },
+          { type: '긍정대처', label: '창문을 활짝 열고 3분간 맑은 바깥 공기 마시기' }
+        ]
+      },
+      {
+        id: 1003,
+        nickname: "해바라기",
+        date: "2026.09.04 16:40",
+        sequence: [
+          { type: '컨디션', label: '식사를 든든하고 맛있게 챙겼어요' },
+          { type: '계기', label: '해야 할 일이나 약속에 대한 부담감' },
+          { type: '생각', label: "'내가 할 수 있는 것부터 하자'" },
+          { type: '감정', label: '그래도 잘해보고 싶은 작은 희망' },
+          { type: '몸느낌', label: '숨이 고르고 안정되어 있었어요' },
+          { type: '행동', label: '믿을 수 있는 사람에게 털어놓고 대화하기' },
+          { type: '결과', label: '마음이 한결 차분해지고 숨이 트였어요' },
+          { type: '긍정대처', label: "'오늘도 참 애썼어, 괜찮아' 나를 안아주며 토닥이기" }
+        ]
+      },
+      {
+        id: 2001,
+        nickname: "솔바람",
+        date: "2026.09.03 11:20",
+        sequence: [
+          { type: '컨디션', label: '끼니를 거르고 허기졌어요' },
+          { type: '계기', label: '특별한 일 없이 문득 찾아온 공허함' },
+          { type: '생각', label: "'아무것도 하기 싫고 버거워'" },
+          { type: '감정', label: '바닥을 모르겠는 막막한 우울함' },
+          { type: '몸느낌', label: '온몸에 힘이 쭉 빠지고 처졌어요' },
+          { type: '행동', label: '단 음식이나 자극적인 음식 폭식하기' },
+          { type: '결과', label: '몸이 더 무겁고 피로가 누적되었어요' },
+          { type: '긍정대처', label: '햇볕을 쬐며 집 앞 골목 5분간 가볍게 산책하기' }
+        ]
+      },
+      {
+        id: 2002,
+        nickname: "솔바람",
+        date: "2026.09.05 18:05",
+        sequence: [
+          { type: '컨디션', label: '잠을 푹 자고 몸이 개운했어요' },
+          { type: '계기', label: '돈이나 현실적인 생활비 걱정' },
+          { type: '생각', label: "'잠깐 쉬어가도 괜찮아'" },
+          { type: '감정', label: '사소한 일에도 느껴진 고마움' },
+          { type: '몸느낌', label: '머리가 맑고 가벼웠어요' },
+          { type: '행동', label: '가볍게 산책하거나 바깥 공기 쐬기' },
+          { type: '결과', label: '작은 성취감과 뿌듯함이 남았어요' },
+          { type: '긍정대처', label: '좋아하는 음악이나 자연의 소리 듣기' }
         ]
       }
     ];
@@ -1148,18 +1193,32 @@
     // 내담자 전용 마음 분석 편지 뷰 (Client Only)
     // ==========================================
     function ClientAIReportView({ chains, nickname }) {
-      const calculateMetrics = () => {
+      const [apiKey, setApiKey] = useState(() => {
+        try { return localStorage.getItem('mind_gemini_api_key') || ''; } catch (e) { return ''; }
+      });
+      const [showKeyModal, setShowKeyModal] = useState(false);
+      const [tempKey, setTempKey] = useState('');
+      const [isGenerating, setIsGenerating] = useState(false);
+      const [aiLetter, setAiLetter] = useState('');
+      const [generationMode, setGenerationMode] = useState('dynamic'); // 'gemini' | 'dynamic'
+      const [copied, setCopied] = useState(false);
+
+      const userName = nickname ? `${nickname} 님` : '선생님';
+
+      // 1. 내담자 기록 분석 통계 및 핵심 궤적 추출
+      const metrics = React.useMemo(() => {
+        if (!chains || chains.length === 0) return null;
+
         const countsByType = {
           '컨디션': {}, '계기': {}, '생각': {}, '감정': {},
           '몸느낌': {}, '행동': {}, '결과': {}, '긍정대처': {}
         };
-        const allCounts = {};
         const inDeg = {}, outDeg = {};
 
         chains.forEach(c => {
+          if (!Array.isArray(c.sequence)) return;
           c.sequence.forEach((s, idx) => {
             const label = s.label;
-            allCounts[label] = (allCounts[label] || 0) + 1;
             if (countsByType[s.type]) {
               countsByType[s.type][label] = (countsByType[s.type][label] || 0) + 1;
             }
@@ -1173,16 +1232,19 @@
           return sorted[0] ? sorted[0][0] : fallback;
         };
 
-        const sortedAll = Object.entries(allCounts).sort((a, b) => b[1] - a[1]);
-        const topBottleneck = getTop(countsByType['행동'], sortedAll[0]?.[0] || '하루 종일 누워있기');
-        const ignitionNode = Object.entries(outDeg).sort((a, b) => b[1] - a[1])[0]?.[0] || getTop(countsByType['계기'], '가족과 말다툼');
+        const topBottleneck = getTop(countsByType['행동'], '혼자 웅크려 있기');
+        const ignitionNode = Object.entries(outDeg).sort((a, b) => b[1] - a[1])[0]?.[0] || getTop(countsByType['계기'], '주변과의 마찰이나 부담감');
         const topCondition = getTop(countsByType['컨디션'], '피로와 수면 부족');
-        const topTrigger = getTop(countsByType['계기'], '대인관계 갈등 또는 스트레스');
-        const topThought = getTop(countsByType['생각'], '부정적 자동적 사고');
-        const topEmotion = getTop(countsByType['감정'], '불안 및 무기력');
-        const topBody = getTop(countsByType['몸느낌'], '가슴 답답함 및 신체 긴장');
-        const topOutcome = getTop(countsByType['결과'], '자책감 및 피로 누적');
+        const topTrigger = getTop(countsByType['계기'], '예상치 못한 마음의 부담');
+        const topThought = getTop(countsByType['생각'], '부정적 자동적 생각');
+        const topEmotion = getTop(countsByType['감정'], '불안과 답답함');
+        const topBody = getTop(countsByType['몸느낌'], '가슴 두근거림 및 긴장');
+        const topOutcome = getTop(countsByType['결과'], '자책감과 피로 누적');
         const topPositiveCoping = getTop(countsByType['긍정대처'], '따뜻한 차 마시기 및 심호흡');
+
+        const latest = chains[0];
+        const oldest = chains[chains.length - 1];
+        const hasProgress = chains.length > 1;
 
         return {
           totalChains: chains.length,
@@ -1195,104 +1257,359 @@
           topBody,
           topOutcome,
           topPositiveCoping,
-          latestDate: chains[0]?.date || '최근'
+          latestDate: latest?.date || '최근',
+          latestSession: latest,
+          oldestSession: oldest,
+          hasProgress
         };
+      }, [chains]);
+
+      // 2. [지능형 동적 서사 엔진] - API 키 미입력/오프라인 시 풍부하고 감동적인 맞춤 편지 작성
+      const buildDynamicLetter = () => {
+        if (!metrics) return "";
+
+        const { totalChains, topCondition, topTrigger, topThought, topEmotion, topBody, topBottleneck, topOutcome, topPositiveCoping } = metrics;
+
+        // 정서 및 신체 감각 기반의 감성적 공감 문맥
+        let emotionContext = "";
+        if (topEmotion.includes('불안') || topEmotion.includes('두려움') || topEmotion.includes('철렁')) {
+          emotionContext = `가슴이 덜컥 내려앉고 세상이 흔들리는 듯한 불안이 엄습할 때, 몸은 '${topBody}' 신호로 그 다급함을 외치고 있었습니다.`;
+        } else if (topEmotion.includes('우울') || topEmotion.includes('막막') || topEmotion.includes('공허') || topEmotion.includes('눈물')) {
+          emotionContext = `끝이 보이지 않는 막막함과 쓸쓸한 마음에 가슴이 아려올 때, 온몸에 힘이 빠지고 '${topBody}' 무거운 감각이 온몸을 짓눌렀을 것입니다.`;
+        } else if (topEmotion.includes('화') || topEmotion.includes('답답')) {
+          emotionContext = `속에서 끓어오르는 답답함과 억울함으로 머리가 지끈거리고, 온몸이 '${topBody}' 굳어가는 고통을 홀로 삼키셔야 했습니다.`;
+        } else {
+          emotionContext = `마음 한구석의 복잡한 감정과 함께 몸에서 전해오는 '${topBody}' 느낌을 마주하며 적잖이 혼란스러우셨을 것입니다.`;
+        }
+
+        // 행동과 부적 강화의 자비로운 심리학적 해석
+        let actionInterpretation = "";
+        if (topBottleneck.includes('누워') || topBottleneck.includes('잠') || topBottleneck.includes('이불')) {
+          actionInterpretation = `그 순간 '${topBottleneck}' 행동을 선택하셨던 것은 결코 의지가 약해서가 아닙니다. 과열된 엔진을 식히듯, 너무 지친 마음이 더는 다치지 않기 위해 본능적으로 선택한 '임시 긴급 셧다운'이었습니다. 비록 그 뒤에 '${topOutcome}'이(가) 찾아와 마음을 더 무겁게 했지만, 그때의 ${userName}은 그저 살기 위해 최선을 다해 버티고 계셨던 것입니다.`;
+        } else if (topBottleneck.includes('피하') || topBottleneck.includes('연락') || topBottleneck.includes('숨') || topBottleneck.includes('방')) {
+          actionInterpretation = `세상의 소음과 시선으로부터 도망쳐 '${topBottleneck}'을(를) 택하셨던 것은, 상처받은 내 여린 마음을 지키기 위한 '마음의 요새'가 절실했기 때문입니다. 비록 홀로 남겨진 자리에서 '${topOutcome}'이라는 씁쓸한 외로움이 맴돌았을지라도, 그 순간만큼은 나를 보호하려는 정직한 몸부림이었습니다.`;
+        } else if (topBottleneck.includes('폭식') || topBottleneck.includes('음식') || topBottleneck.includes('먹') || topBottleneck.includes('단')) {
+          actionInterpretation = `가슴의 공허함과 고통을 달래려 '${topBottleneck}'(으)로 향하셨던 발걸음은, 마음의 허기를 달래기 위한 가장 즉각적이고 다급한 자기 돌봄의 시도였습니다. 비록 뒤이어 찾아온 '${topOutcome}'으로 자책감이 드셨겠지만, 그만큼 ${userName}의 마음이 따뜻한 위로와 채움을 간절히 원하고 있었다는 증거입니다.`;
+        } else {
+          actionInterpretation = `마음의 소용돌이 속에서 '${topBottleneck}'(으)로 향했던 것은, 밀려오는 고통을 잠시나마 덜어내기 위한 마음의 정직한 대처였습니다. 비록 그 결과가 '${topOutcome}'(으)로 이어져 아쉬움이 남았을지라도, 그 고된 순간을 무사히 건너오신 것만으로도 참 애쓰셨습니다.`;
+        }
+
+        // 다회차 회기 비교 (진화와 성장의 발견)
+        let trajectorySection = "";
+        if (metrics.hasProgress) {
+          trajectorySection = `\n> 🌿 **${userName}의 발걸음에서 발견한 작은 희망의 빛**\n> 지난 ${totalChains}번의 기록들을 톺아보면, 거센 스트레스 폭풍 속에서도 점차 나를 잃지 않으려는 노력이 선명해지고 있습니다. 특히 최근 기록에서 스스로 선택하신 긍정 대처인 **"${topPositiveCoping}"**은, 어두운 방 안에 조용히 촛불 하나를 켜는 것과 같은 눈부신 용기입니다.\n`;
+        }
+
+        return `친애하는 ${userName}께,
+
+${userName}께서 정성껏 남겨주신 ${totalChains}번의 마음 기록을 가만히 읽어내려가며, 그동안 홀로 견뎌내셨을 고단함과 애틋한 마음이 고스란히 전해져 왔습니다.
+
+어떤 날은 '${topCondition}' 상태로 하루를 시작하며 몸과 마음의 에너지가 이미 바닥나 있었고, 그 상태에서 불쑥 마주친 '${topTrigger}'(은)는 감당하기 벅찬 파도처럼 밀려왔을 것입니다.
+
+머릿속에서 "${topThought}"라는 날카로운 생각이 번쩍일 때, ${emotionContext}
+
+${actionInterpretation}
+${trajectorySection}
+이제는 자책의 무거운 외투를 벗어두고, 스스로에게 가장 친절한 친구가 되어주실 시간입니다. ${userName}께서 마음으로 직접 약속해 주신 **"${topPositiveCoping}"**을 중심으로, 오늘 하루 부담 없이 실천해볼 세 가지 작은 쉼표를 제안해 드립니다.
+
+---
+
+### 🌱 ${userName}을 위한 '오늘의 3단계 마음 돌봄 가이드'
+
+1. **[1단계: 알아차림] 몸의 신호에 다정하게 이름 붙이기**
+   - 몸에서 **"${topBody}"** 느낌이 쿵 하고 감지될 때, 놀라지 마시고 *"아, 지금 내 몸과 마음이 긴장하고 있구나. 잠깐 쉬어가라는 신호구나"*라고 가만히 읊조려 주세요.
+
+2. **[2단계: 멈춤과 자기위로] 나를 안아주는 3초 쉼표**
+   - 머릿속에 **"${topThought}"** 생각이 스칠 때 반박하거나 자책하지 말고, 가슴에 손을 얹은 채 *"그동안 참 많이 버텨왔어, 지금 이대로도 괜찮아"*라며 세 번의 깊은 숨을 내쉬어 보세요.
+
+3. **[3단계: 내 손으로 선택한 회복] 3분 미세 행동 실천**
+   - 익숙한 회피로 돌아가기 전, ${userName}이 직접 정하신 **"${topPositiveCoping}"**을 딱 3분만 먼저 실행해 보세요. 이 작은 3분이 악순환의 사슬을 끊고 새로운 회복의 길을 열어줄 것입니다.
+
+${userName}의 마음 정원에 다시 푸른 싹이 돋아나길 온 마음으로 응원합니다.
+
+— ${userName}의 마음 곁에서, **마음 돋보기** 드림 🌻`;
       };
 
-      const metrics = calculateMetrics();
-      const userName = nickname ? `${nickname} 님` : '선생님';
+      // 3. Gemini API 실시간 LLM 편지 생성
+      const generateGeminiLetter = async () => {
+        const cleanKey = apiKey.trim();
+        if (!cleanKey) {
+          setShowKeyModal(true);
+          return;
+        }
 
-      const getActionPrescriptions = (action, body, thought, positiveCoping) => {
-        const act = (action || '').toLowerCase();
-        if (act.includes('누워') || act.includes('잠') || act.includes('침대')) {
-          return [
-            { icon: '🌱', text: `<strong>[내가 정한 긍정 대처]</strong> 침대에 바로 눕기 전, <strong>"${positiveCoping}"</strong>을(를) 먼저 딱 3분간 실천해 보세요.` },
-            { icon: '🪟', text: `몸이 무겁고 가라앉을 땐 침대 대신 <strong>의자나 소파에 앉아 딱 3분간 창밖 바람</strong>을 쐬어보세요.` },
-            { icon: '🫂', text: `"${thought}" 생각이 스칠 때 <em>"지금 내 몸과 마음이 쉼을 달라고 신호를 보내는구나"</em>라고 따뜻하게 위로해 주세요.` }
-          ];
-        } else if (act.includes('피하') || act.includes('연락') || act.includes('문자') || act.includes('방') || act.includes('숨')) {
-          return [
-            { icon: '🌱', text: `<strong>[내가 정한 긍정 대처]</strong> 사람과 연락을 피하기 전, <strong>"${positiveCoping}"</strong>으로 마음에 작은 숨구멍을 내어주세요.` },
-            { icon: '💬', text: `모든 연락을 바로 받지 않아도 괜찮습니다. 대신 <em>"나중에 편할 때 연락할게요"</em>라는 <strong>짧은 한 줄 상용구만 남겨보세요.</strong>` },
-            { icon: '🚶', text: `방 안에만 머물기보다 <strong>베란다나 집 앞 골목을 5분간 천천히 걷고</strong> 들어와 보세요.` }
-          ];
-        } else if (act.includes('식') || act.includes('음식') || act.includes('먹') || act.includes('술') || act.includes('담배')) {
-          return [
-            { icon: '🌱', text: `<strong>[내가 정한 긍정 대처]</strong> 음식이나 술을 찾기 직전, <strong>"${positiveCoping}"</strong>을(를) 먼저 시도해 보세요.` },
-            { icon: '💧', text: `음식을 입에 넣기 전, <strong>시원한 물 한 컵을 먼저 마시고 3분 타이머</strong>를 맞추어 짧은 쉼(Pause)을 가져보세요.` },
-            { icon: '🏷️', text: `지금 느끼는 갈증이 '마음의 허기'인지 '몸의 배고픔'인지 가만히 이름을 붙여보세요.` }
-          ];
-        } else {
-          return [
-            { icon: '🌱', text: `<strong>[내가 정한 긍정 대처]</strong> 익숙한 습관(${action})으로 가기 전, <strong>"${positiveCoping}"</strong>을(를) 1순위로 실행해 보세요.` },
-            { icon: '🌬️', text: `신체 반응(${body})이 느껴질 때 <strong>3번의 깊은 복식호흡</strong>으로 10초간의 짧은 쉼표를 만들어보세요.` },
-            { icon: '🦶', text: `양발을 바닥에 단단히 딛고 <strong>주변 물건 3가지의 색깔을 관찰</strong>하는 그라운딩(Grounding)을 실천해 보세요.` }
-          ];
+        setIsGenerating(true);
+        try {
+          const sessionDetails = chains.map((c, i) => 
+            `[${i + 1}번째 기록 - ${c.date}]\n` +
+            (c.sequence || []).map(s => `  • ${s.type}: ${s.label}`).join('\n')
+          ).join('\n\n');
+
+          const prompt = `당신은 행동활성화(Behavioral Activation, BA)와 수용전념치료(ACT)에 정통한, 세상에서 가장 따뜻하고 지혜로운 임상심리상담사입니다.
+내담자 [${userName}]님의 최근 마음 기록(${chains.length}회)을 깊이 공감하며 꼼꼼히 읽고, 내담자에게 전하는 감동적이고 유려한 [따뜻한 마음 분석 편지]를 작성해 주세요.
+
+[내담자 실제 기록 내역]
+${sessionDetails}
+
+[편지 작성 원칙]
+1. 다정한 편지체(~해요, ~하셨군요, ~드립니다)로, 상담사가 찻잔을 앞에 두고 정성껏 손글씨 편지를 써서 건네는 듯한 온기 있는 어조로 작성하세요.
+2. 내담자가 선택하거나 직접 적은 구체적인 어휘(생각, 감정, 신체 반응, 긍정 대처 등)를 본문에 자연스럽게 녹여내어 "내 마음을 정말 꿰뚫어 보고 있구나"라는 깊은 이해와 유효화(Validation)를 느끼게 하세요.
+3. 내담자의 회피 행동이나 무기력 패턴을 절대 비난하지 말고, 고통을 줄이기 위해 애썼던 '부적 강화(Negative Reinforcement)'의 심리 메커니즘을 따뜻하게 설명해 주세요.
+4. 내담자가 직접 적거나 고른 [긍정 대처]를 중심으로, 오늘 일상에서 3분 만에 실천할 수 있는 [작고 구체적인 3단계 마이크로 실천 약속]을 제안해 주세요.
+5. 마크다운 형식을 활용해 읽기 편하게 구성하세요. 분량은 1,000자 내외로 풍부하게 작성하세요.`;
+
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${cleanKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.7, maxOutputTokens: 2500 }
+            })
+          });
+
+          const data = await res.json();
+          if (data.error) throw new Error(data.error.message || "API 호출 실패");
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) {
+            setAiLetter(text);
+            setGenerationMode('gemini');
+          } else {
+            throw new Error("응답이 비어있습니다.");
+          }
+        } catch (err) {
+          console.warn("Gemini API 호출 실패, 지능형 동적 서사 엔진으로 자동 대체합니다:", err);
+          alert("Gemini API 연결에 실패하여(키 확인 필요), 내장된 정밀 동적 서사 엔진으로 편지를 작성했습니다 😊");
+          setAiLetter(buildDynamicLetter());
+          setGenerationMode('dynamic');
+        } finally {
+          setIsGenerating(false);
         }
       };
 
-      const prescriptions = getActionPrescriptions(metrics.topBottleneck, metrics.topBody, metrics.topThought, metrics.topPositiveCoping);
+      // 초기 로드 시 생성
+      useEffect(() => {
+        if (!chains || chains.length === 0) return;
+        if (apiKey.trim()) {
+          generateGeminiLetter();
+        } else {
+          setAiLetter(buildDynamicLetter());
+          setGenerationMode('dynamic');
+        }
+      }, [chains, apiKey]);
+
+      const handleCopy = () => {
+        if (!aiLetter) return;
+        navigator.clipboard.writeText(aiLetter).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2500);
+        });
+      };
+
+      const handleSaveKey = () => {
+        const cleaned = tempKey.trim();
+        setApiKey(cleaned);
+        try {
+          localStorage.setItem('mind_gemini_api_key', cleaned);
+        } catch (e) {}
+        setShowKeyModal(false);
+        if (cleaned) {
+          setTimeout(() => generateGeminiLetter(), 200);
+        }
+      };
+
+      // 마크다운 줄바꿈 및 스타일 렌더링 헬퍼
+      const renderLetterHtml = (text) => {
+        if (!text) return null;
+
+        const lines = text.split('\n');
+        return lines.map((line, idx) => {
+          const trimmed = line.trim();
+
+          if (trimmed.startsWith('###')) {
+            return (
+              <h4 key={idx} className="text-xl font-extrabold text-amber-950 mt-6 mb-3 flex items-center gap-2">
+                {trimmed.replace(/^###\s*/, '')}
+              </h4>
+            );
+          }
+          if (trimmed.startsWith('##')) {
+            return (
+              <h3 key={idx} className="text-2xl font-black text-amber-950 mt-7 mb-3 border-b border-amber-200 pb-2">
+                {trimmed.replace(/^##\s*/, '')}
+              </h3>
+            );
+          }
+          if (trimmed.startsWith('>')) {
+            return (
+              <div key={idx} className="my-4 p-4 bg-emerald-50/80 border-l-4 border-emerald-500 rounded-r-2xl text-emerald-950 font-medium text-base sm:text-lg">
+                <span dangerouslySetInnerHTML={{ __html: trimmed.replace(/^>\s*/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+              </div>
+            );
+          }
+          if (trimmed.startsWith('---')) {
+            return <hr key={idx} className="my-5 border-amber-200" />;
+          }
+          if (trimmed.match(/^\d+\.\s/)) {
+            const content = trimmed.replace(/^\d+\.\s*/, '');
+            return (
+              <div key={idx} className="my-2.5 pl-4 border-l-2 border-amber-300">
+                <span className="font-extrabold text-amber-900 mr-2">{trimmed.match(/^\d+\./)[0]}</span>
+                <span dangerouslySetInnerHTML={{ __html: content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>') }} />
+              </div>
+            );
+          }
+          if (trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
+            const content = trimmed.replace(/^[-•]\s*/, '');
+            return (
+              <div key={idx} className="my-1.5 pl-4 flex items-start gap-2">
+                <span className="text-amber-600 font-bold shrink-0">•</span>
+                <span dangerouslySetInnerHTML={{ __html: content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>') }} />
+              </div>
+            );
+          }
+          if (!trimmed) {
+            return <div key={idx} className="h-3" />;
+          }
+
+          return (
+            <p key={idx} className="leading-relaxed my-2" dangerouslySetInnerHTML={{
+              __html: trimmed.replace(/\*\*(.*?)\*\*/g, '<strong class="text-amber-950 font-extrabold">$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>')
+            }} />
+          );
+        });
+      };
+
+      if (!metrics) {
+        return (
+          <div className="p-8 text-center text-slate-500">
+            기록된 마음 데이터가 없습니다. 먼저 ✏️ 기록하기 탭에서 마음을 기록해 보세요.
+          </div>
+        );
+      }
 
       return (
-        <div className="space-y-5 animate-fadeIn">
-          {/* 상단 타이틀 카드 */}
-          <div className="bg-amber-100/80 border border-amber-300 rounded-3xl p-5 flex items-center justify-between">
+        <div className="space-y-5 animate-fadeIn pb-12">
+          {/* 상단 툴바 카드 */}
+          <div className="bg-gradient-to-r from-amber-100/90 to-amber-200/70 border border-amber-300 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
             <div className="flex items-center gap-3">
               <span className="text-4xl">💌</span>
               <div>
-                <span className="text-xs font-bold text-amber-800 block">임상심리 AI 마음 분석서</span>
-                <h3 className="text-xl font-black text-amber-950">{userName}을 위한 따뜻한 마음 편지</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-amber-900 uppercase tracking-wider">
+                    {generationMode === 'gemini' ? '✨ Gemini AI 실시간 심층 편지' : '🌱 마음 맞춤 동적 서사 편지'}
+                  </span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/90 text-amber-800 font-bold border border-amber-300">
+                    총 {metrics.totalChains}회 분석
+                  </span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-amber-950 tracking-tight">
+                  {userName}을 위한 따뜻한 마음 편지
+                </h3>
               </div>
             </div>
-            <span className="text-xs px-3 py-1 bg-white text-amber-900 border border-amber-300 rounded-full font-bold">
-              총 {metrics.totalChains}회 분석
-            </span>
-          </div>
 
-          {/* 본문 리포트 카드 */}
-          <div className="bg-white p-6 rounded-3xl border-2 border-amber-300 shadow-sm space-y-5">
-            <div className="border-b border-amber-100 pb-3">
-              <span className="text-xs font-extrabold text-amber-700 bg-amber-100 px-3 py-1 rounded-full">
-                마음의 길잡이
-              </span>
-              <h4 className="text-2xl font-extrabold text-slate-900 mt-2">
-                "선생님의 소중한 기록 {metrics.totalChains}번을 분석해 마음의 길을 찾아드립니다"
-              </h4>
-              <p className="text-xs text-slate-400 mt-1">최근 기록 일시: {metrics.latestDate}</p>
-            </div>
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              <button
+                onClick={() => { setTempKey(apiKey); setShowKeyModal(true); }}
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl border touch-btn flex items-center gap-1 shadow-sm ${
+                  apiKey ? 'bg-amber-200/90 border-amber-300 text-amber-950' : 'bg-white border-amber-300 text-amber-900 hover:bg-amber-50'
+                }`}
+                title="Google Gemini AI 키 설정"
+              >
+                <span>🔑</span>
+                <span>{apiKey ? 'AI 키 연동됨' : 'AI 키 등록'}</span>
+              </button>
 
-            <div className="space-y-4 text-base sm:text-lg text-slate-700 leading-relaxed">
-              <div className="p-4 bg-amber-50/70 rounded-2xl border border-amber-200">
-                <span className="font-extrabold text-amber-900 block mb-1">
-                  1. 마음의 신호등: 불이 켜지는 순간 🚦
-                </span>
-                {userName}께서는 일상에서 <strong>"{metrics.topTrigger}"</strong>이나 컨디션 저하가 발생할 때, 가슴속에서 <strong>"{metrics.topEmotion}"</strong> 마음과 함께 몸에서 <strong>"{metrics.topBody}"</strong> 반응이 가장 먼저 찾아옵니다. <br/>
-                이것은 약해서가 아니라, 몸과 마음이 <em>"지금 너무 힘들어요, 잠시 쉬어가요"</em>라고 보내는 정직한 신호입니다.
-              </div>
+              <button
+                onClick={() => apiKey ? generateGeminiLetter() : setAiLetter(buildDynamicLetter())}
+                disabled={isGenerating}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow touch-btn flex items-center gap-1 disabled:opacity-50"
+                title="편지 다시 쓰기"
+              >
+                <span>🔄</span>
+                <span>{isGenerating ? '작성 중...' : '다시 쓰기'}</span>
+              </button>
 
-              <div className="p-4 bg-rose-50/70 rounded-2xl border border-rose-200">
-                <span className="font-extrabold text-rose-900 block mb-1">
-                  2. 단골 행동의 덫: 왜 "{metrics.topBottleneck}"을(를) 하게 될까요? 🔄
-                </span>
-                마음이 복잡하고 <strong>"{metrics.topThought}"</strong> 생각이 맴돌 때, {userName}의 마음은 본능적으로 <strong>"{metrics.topBottleneck}"</strong> 행동을 선택하게 됩니다. <br/>
-                그 순간만큼은 괴로움에서 벗어날 수 있어 일시적인 안도감을 주지만, 시간이 지나면 <strong>"{metrics.topOutcome}"</strong>(으)로 이어져 마음에 더 큰 짐을 남기는 악순환이 생겨납니다.
-              </div>
-
-              <div className="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-200">
-                <span className="font-extrabold text-emerald-900 block mb-1.5">
-                  3. {userName}을 위한 마음의 브레이크 (맞춤 실천 처방 & 긍정 대처) 🌻
-                </span>
-                <ul className="space-y-2.5 text-emerald-950 font-medium text-base">
-                  {prescriptions.map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="text-lg shrink-0">{item.icon}</span>
-                      <span dangerouslySetInnerHTML={{ __html: item.text }} />
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <button
+                onClick={handleCopy}
+                className="px-3 py-1.5 bg-white hover:bg-amber-50 text-amber-950 border border-amber-300 text-xs font-bold rounded-xl shadow-sm touch-btn flex items-center gap-1"
+                title="편지 본문 복사하기"
+              >
+                <span>{copied ? '✅' : '📋'}</span>
+                <span>{copied ? '복사됨!' : '복사'}</span>
+              </button>
             </div>
           </div>
+
+          {/* 본문 감성 편지지 카드 */}
+          <div className="bg-[#FFFDF9] p-6 sm:p-8 rounded-3xl border-2 border-amber-200/80 shadow-md relative overflow-hidden">
+            {/* 배경 워터마크 장식 */}
+            <div className="absolute right-[-10px] top-[-10px] text-8xl opacity-10 pointer-events-none select-none">
+              🌻
+            </div>
+
+            {isGenerating ? (
+              <div className="py-20 text-center space-y-4">
+                <div className="text-5xl animate-bounce">✍️</div>
+                <h4 className="text-xl font-black text-amber-950">
+                  {userName}을 위한 따뜻한 편지를 정성껏 적고 있습니다...
+                </h4>
+                <p className="text-sm text-slate-500 font-medium">
+                  {userName}이 남겨주신 소중한 기록들을 가만히 되짚어보는 중입니다 😊
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4 text-base sm:text-lg text-slate-800 leading-relaxed font-sans">
+                {renderLetterHtml(aiLetter)}
+              </div>
+            )}
+          </div>
+
+          {/* AI 키 설정 모달 */}
+          {showKeyModal && (
+            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+              <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border-4 border-amber-400 space-y-4">
+                <div className="text-center space-y-2">
+                  <span className="text-4xl">🤖</span>
+                  <h3 className="text-2xl font-black text-amber-950">Google Gemini AI 키 연동</h3>
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    Gemini API 키를 등록하시면 인공지능이 매번 내담자의 감정 상태와 행동 연쇄를 깊이 있게 추론하여 세상에 단 하나뿐인 온기 있는 맞춤 편지를 작성해 드립니다.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-amber-900 mb-1">Gemini API Key</label>
+                  <input
+                    type="password"
+                    value={tempKey}
+                    onChange={(e) => setTempKey(e.target.value)}
+                    placeholder="AIzaSy..."
+                    className="w-full text-base border-2 border-amber-300 rounded-2xl p-3 focus:border-amber-600 focus:outline-none"
+                    autoFocus
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1.5">
+                    * 키는 브라우저 내부(localStorage)에만 안전하게 보관됩니다.<br/>
+                    * 키가 없어도 내장된 고도화 동적 서사 엔진으로 풍부한 편지가 제공됩니다.
+                  </p>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => setShowKeyModal(false)}
+                    className="flex-1 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-2xl touch-btn"
+                  >
+                    닫기
+                  </button>
+                  <button
+                    onClick={handleSaveKey}
+                    className="flex-1 py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-2xl touch-btn shadow-md"
+                  >
+                    저장하고 편지 쓰기
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     }

@@ -56,97 +56,97 @@
 
     // 8단계 설문 정보 (긍정과 부정이 조화롭게 공존하는 균형 잡힌 마음 탐색)
     const STEP_INFO = [
-      { step: 1, title: "몸과 마음의 컨디션", desc: "어떤 일이 생기기 전, 내 몸과 마음 상태는 어떠셨나요? (개운했던 점이나 지쳤던 점 모두 좋아요)", icon: "🛌" },
-      { step: 2, title: "마음이 흔들린 계기", desc: "어떤 순간이나 상황에서 마음이 쿵 내려앉거나 흔들리기 시작했나요?", icon: "⚡" },
-      { step: 3, title: "그때 스친 생각", desc: "그 순간 머릿속에 번쩍 맴돌았던 생각은 무엇이었나요? (버텨보려던 생각도 좋아요)", icon: "💭" },
-      { step: 4, title: "차오른 감정", desc: "가슴속에서 가장 진하게 요동쳤거나 느껴진 마음은 무엇이었나요?", icon: "❤️" },
-      { step: 5, title: "몸의 느낌 (신체 반응)", desc: "그때 내 몸은 어떤 신호를 보내고 있었나요? (긴장되거나 혹은 편안했던 부위)", icon: "🫀" },
-      { step: 6, title: "내가 했던 행동", desc: "그 순간 나를 보호하거나 달래기 위해 어떤 행동을 하셨나요?", icon: "🏃" },
-      { step: 7, title: "그 뒤에 남은 결과", desc: "그 행동을 하고 난 직후와 시간이 지난 뒤, 마음에 어떤 결과가 남았나요?", icon: "⏳" },
-      { step: 8, title: "나를 돌보는 긍정적 대처", desc: "나를 회복시키고 따뜻하게 보살피기 위해, 지금 당장 실천해볼 작은 행동은 무엇일까요?", icon: "🌱" }
+      { step: 1, title: "몸과 마음의 컨디션", desc: "어떤 일이 생기기 전, 내 몸과 마음 상태는 어떠셨나요? (개운했던 점이나 지쳤던 점 모두 좋아요)", icon: "" },
+      { step: 2, title: "마음이 흔들린 계기", desc: "어떤 순간이나 상황에서 마음이 쿵 내려앉거나 흔들리기 시작했나요?", icon: "" },
+      { step: 3, title: "그때 스친 생각", desc: "그 순간 머릿속에 번쩍 맴돌았던 생각은 무엇이었나요? (버텨보려던 생각도 좋아요)", icon: "" },
+      { step: 4, title: "차오른 감정", desc: "가슴속에서 가장 진하게 요동쳤거나 느껴진 마음은 무엇이었나요?", icon: "" },
+      { step: 5, title: "몸의 느낌 (신체 반응)", desc: "그때 내 몸은 어떤 신호를 보내고 있었나요? (긴장되거나 혹은 편안했던 부위)", icon: "" },
+      { step: 6, title: "내가 했던 행동", desc: "그 순간 나를 보호하거나 달래기 위해 어떤 행동을 하셨나요?", icon: "" },
+      { step: 7, title: "그 뒤에 남은 결과", desc: "그 행동을 하고 난 직후와 시간이 지난 뒤, 마음에 어떤 결과가 남았나요?", icon: "" },
+      { step: 8, title: "나를 돌보는 긍정적 대처", desc: "나를 회복시키고 따뜻하게 보살피기 위해, 지금 당장 실천해볼 작은 행동은 무엇일까요?", icon: "" }
     ];
 
     const PRESETS = {
       1: [
-        "잠을 푹 자고 몸이 개운했어요 ☀️",
-        "잠을 잘 못 자서 피곤했어요 💤",
-        "식사를 든든하고 맛있게 챙겼어요 🥗",
-        "끼니를 거르고 허기졌어요 🍚",
-        "마음이 잔잔하고 무난했어요 🍃",
-        "온몸이 뻐근하고 무거웠어요 🔋",
-        "약 복용이나 건강을 잘 챙겼어요 💊",
-        "혼자 있어 적적하고 외로웠어요 👤"
+        "잠을 푹 자고 몸이 개운했어요",
+        "잠을 잘 못 자서 피곤했어요",
+        "식사를 든든하고 맛있게 챙겼어요",
+        "끼니를 거르고 허기졌어요",
+        "마음이 잔잔하고 무난했어요",
+        "온몸이 뻐근하고 무거웠어요",
+        "약 복용이나 건강을 잘 챙겼어요",
+        "혼자 있어 적적하고 외로웠어요"
       ],
       2: [
-        "가족이나 지인과의 사소한 의견 충돌 🗣️",
-        "누군가의 무심코 던진 서운한 한마디 💬",
-        "해야 할 일이나 약속에 대한 부담감 🗓️",
-        "문득 밀려온 옛 기억이나 쓸쓸한 생각 🌧️",
-        "돈이나 현실적인 생활비 걱정 💸",
-        "예상치 못한 계획의 어긋남 🧭",
-        "갑작스러운 소음이나 당황스러운 자극 📢",
-        "특별한 일 없이 문득 찾아온 공허함 🌫️"
+        "가족이나 지인과의 사소한 의견 충돌",
+        "누군가의 무심코 던진 서운한 한마디",
+        "해야 할 일이나 약속에 대한 부담감",
+        "문득 밀려온 옛 기억이나 쓸쓸한 생각",
+        "돈이나 현실적인 생활비 걱정",
+        "예상치 못한 계획의 어긋남",
+        "갑작스러운 소음이나 당황스러운 자극",
+        "특별한 일 없이 문득 찾아온 공허함"
       ],
       3: [
-        "'그래도 차분히 넘겨보자' 🌱",
-        "'다 내 탓인 것만 같아...' 😔",
-        "'내가 할 수 있는 것부터 하자' 💡",
-        "'아무것도 하기 싫고 버거워' 🛑",
-        "'잠깐 쉬어가도 괜찮아' ☕",
-        "'누가 날 안 좋게 보나 봐' 👂",
-        "'나도 꽤 잘 버텨왔잖아' 🌟",
-        "'어차피 다 소용없을 텐데...' 🚪"
+        "'그래도 차분히 넘겨보자'",
+        "'다 내 탓인 것만 같아...'",
+        "'내가 할 수 있는 것부터 하자'",
+        "'아무것도 하기 싫고 버거워'",
+        "'잠깐 쉬어가도 괜찮아'",
+        "'누가 날 안 좋게 보나 봐'",
+        "'나도 꽤 잘 버텨왔잖아'",
+        "'어차피 다 소용없을 텐데...'"
       ],
       4: [
-        "마음 한구석의 잔잔한 차분함 🍃",
-        "가슴이 철렁 내려앉는 불안함 😰",
-        "그래도 잘해보고 싶은 작은 희망 ✨",
-        "바닥을 모르겠는 막막한 우울함 🌧️",
-        "사소한 일에도 느껴진 고마움 🙏",
-        "주체하기 힘든 화와 답답함 😡",
-        "앞이 캄캄하고 위축되는 두려움 😨",
-        "외롭고 서러워 눈물 나는 마음 😢"
+        "마음 한구석의 잔잔한 차분함",
+        "가슴이 철렁 내려앉는 불안함",
+        "그래도 잘해보고 싶은 작은 희망",
+        "바닥을 모르겠는 막막한 우울함",
+        "사소한 일에도 느껴진 고마움",
+        "주체하기 힘든 화와 답답함",
+        "앞이 캄캄하고 위축되는 두려움",
+        "외롭고 서러워 눈물 나는 마음"
       ],
       5: [
-        "숨이 고르고 안정되어 있었어요 🌬️",
-        "가슴이 쿵쾅쿵쾅 뛰고 답답했어요 💓",
-        "온몸의 긴장이 풀리고 편안했어요 🛋️",
-        "어깨와 목이 뻣뻣하게 굳었어요 🧱",
-        "머리가 맑고 가벼웠어요 ☀️",
-        "머리가 지끈지끈 무겁고 아팠어요 🤕",
-        "온몸에 힘이 쭉 빠지고 처졌어요 🫠",
-        "속이 울렁거리거나 더부룩했어요 🤢"
+        "숨이 고르고 안정되어 있었어요",
+        "가슴이 쿵쾅쿵쾅 뛰고 답답했어요",
+        "온몸의 긴장이 풀리고 편안했어요",
+        "어깨와 목이 뻣뻣하게 굳었어요",
+        "머리가 맑고 가벼웠어요",
+        "머리가 지끈지끈 무겁고 아팠어요",
+        "온몸에 힘이 쭉 빠지고 처졌어요",
+        "속이 울렁거리거나 더부룩했어요"
       ],
       6: [
-        "가볍게 산책하거나 바깥 공기 쐬기 🚶",
-        "하루 종일 이불 속에 웅크려 누워있기 🛌",
-        "따뜻한 물 한 잔 마시며 숨 고르기 🍵",
-        "전화와 문자를 다 피하고 혼자 숨기 🔕",
-        "좋아하는 음악이나 영상 보며 기분 전환 🎵",
-        "단 음식이나 자극적인 음식 폭식하기 🍩",
-        "믿을 수 있는 사람에게 털어놓고 대화하기 💬",
-        "방 밖이나 집 밖으로 한 발짝도 안 나가기 🚪"
+        "가볍게 산책하거나 바깥 공기 쐬기",
+        "하루 종일 이불 속에 웅크려 누워있기",
+        "따뜻한 물 한 잔 마시며 숨 고르기",
+        "전화와 문자를 다 피하고 혼자 숨기",
+        "좋아하는 음악이나 영상 보며 기분 전환",
+        "단 음식이나 자극적인 음식 폭식하기",
+        "믿을 수 있는 사람에게 털어놓고 대화하기",
+        "방 밖이나 집 밖으로 한 발짝도 안 나가기"
       ],
       7: [
-        "마음이 한결 차분해지고 숨이 트였어요 🌿",
-        "잠깐은 고통을 잊고 편안했어요 (단기 안도) 😌",
-        "작은 성취감과 뿌듯함이 남았어요 🏅",
-        "더 외롭고 답답한 기분이 밀려왔어요 😢",
-        "시간을 허비했다는 자책감이 들었어요 😔",
-        "주변 사람들에게 미안하고 눈치 보였어요 🙏",
-        "몸이 더 무겁고 피로가 누적되었어요 🔋",
-        "완전히 풀리진 않았지만 고비는 넘겼어요 🛡️"
+        "마음이 한결 차분해지고 숨이 트였어요",
+        "잠깐은 고통을 잊고 편안했어요 (단기 안도)",
+        "작은 성취감과 뿌듯함이 남았어요",
+        "더 외롭고 답답한 기분이 밀려왔어요",
+        "시간을 허비했다는 자책감이 들었어요",
+        "주변 사람들에게 미안하고 눈치 보였어요",
+        "몸이 더 무겁고 피로가 누적되었어요",
+        "완전히 풀리진 않았지만 고비는 넘겼어요"
       ],
       8: [
-        "따뜻한 물이나 차 한 잔 천천히 음미하기 🍵",
-        "창문을 활짝 열고 3분간 맑은 바깥 공기 마시기 🪟",
-        "마음이 편안해지는 음악이나 자연의 소리 듣기 🎵",
-        "나를 응원해 주는 사람에게 짧게 안부 문자 보내기 💬",
-        "햇볕을 쬐며 집 앞 골목 5분간 가볍게 산책하기 🚶",
-        "가슴에 손을 얹고 깊은 심호흡 3번과 기지개 켜기 🌬️",
-        "'오늘도 참 애썼어, 괜찮아' 나를 안아주며 토닥이기 🫂",
-        "따뜻한 물로 세수하거나 기분 좋게 샤워하기 🚿",
-        "좋아하는 책이나 글귀 천천히 한 페이지 읽기 📖"
+        "따뜻한 물이나 차 한 잔 천천히 음미하기",
+        "창문을 활짝 열고 3분간 맑은 바깥 공기 마시기",
+        "마음이 편안해지는 음악이나 자연의 소리 듣기",
+        "나를 응원해 주는 사람에게 짧게 안부 문자 보내기",
+        "햇볕을 쬐며 집 앞 골목 5분간 가볍게 산책하기",
+        "가슴에 손을 얹고 깊은 심호흡 3번과 기지개 켜기",
+        "'오늘도 참 애썼어, 괜찮아' 나를 안아주며 토닥이기",
+        "따뜻한 물로 세수하거나 기분 좋게 샤워하기",
+        "좋아하는 책이나 글귀 천천히 한 페이지 읽기"
       ]
     };
 
@@ -490,7 +490,7 @@
       const handleSaveNickname = (name) => {
         const trimmedNick = (name !== undefined ? name : inputNick).trim();
         if (!trimmedNick) {
-          alert("편하게 부르실 수 있는 닉네임을 적어주세요 😊");
+          alert("편하게 부르실 수 있는 닉네임을 적어주세요.");
           return;
         }
         setNickname(trimmedNick);
@@ -507,7 +507,7 @@
       const handleNext = () => {
         const trimmedCustom = customInput.trim();
         if (!selectedAnswers[currentStep] && !trimmedCustom) {
-          alert("마음에 드는 항목을 하나 콕 눌러주시거나, 아래에 적어주세요 😊");
+          alert("마음에 드는 항목을 하나 선택해 주시거나, 아래에 적어주세요.");
           return;
         }
 
@@ -559,7 +559,7 @@
         setChains(prev => [newEntry, ...prev.filter(item => item.id !== newEntry.id)]);
 
         const dispName = clientCode ? `[${clientCode}] ${nickname || '선생'}님` : `${nickname || '선생'}님`;
-        alert(`참 잘하셨습니다, ${dispName}! 🌻\n소중한 마음 기록과 긍정 대처가 저장되었습니다.\n수고하셨습니다.\n내 마음 행동 지도로 안내해 드립니다.`);
+        alert(`참 잘하셨습니다, ${dispName}!\n소중한 마음 기록과 긍정 대처가 저장되었습니다.\n수고하셨습니다.\n내 마음 행동 순서(순서대로 보기)로 안내해 드립니다.`);
         setCurrentStep(1);
         setSelectedAnswers({});
         setCustomInput('');
@@ -604,34 +604,14 @@
           <header className="mb-4">
             <div className="flex items-center justify-between bg-white/80 backdrop-blur-sm p-3.5 rounded-2xl shadow-sm border border-amber-200/60">
               <div className="flex items-center gap-2">
-                <span className="text-2xl">🌻</span>
                 <div>
                   <h1 className="text-base font-black text-amber-950 tracking-tight leading-tight">마음 돋보기</h1>
                   <span className="text-[11px] font-bold text-amber-800/80">내 마음 행동 활성화 체인</span>
                 </div>
               </div>
 
-              {/* 닉네임 & 클라우드 상태 */}
+              {/* 닉네임 설정 */}
               <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => {
-                    const currentCfg = (window.MindDB && typeof window.MindDB.getConfig === 'function')
-                      ? window.MindDB.getConfig()
-                      : null;
-                    setConfigInput(currentCfg ? JSON.stringify(currentCfg, null, 2) : '');
-                    setShowDbModal(true);
-                  }}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold flex items-center gap-1 shadow-sm touch-btn border ${
-                    dbStatus.isCloud
-                      ? 'bg-emerald-100 border-emerald-300 text-emerald-800'
-                      : 'bg-amber-200/80 border-amber-300 text-amber-800'
-                  }`}
-                  title="클라우드 DB 실시간 연결 상태"
-                >
-                  <span>{dbStatus.isCloud ? '🟢' : '🟡'}</span>
-                  <span>{dbStatus.isCloud ? '실시간 동기화' : '로컬 모드'}</span>
-                </button>
-
                 <button
                   onClick={() => {
                     setInputNick(nickname);
@@ -640,14 +620,12 @@
                   className="px-3 py-1 bg-amber-200 hover:bg-amber-300 text-amber-950 rounded-full text-xs font-extrabold flex items-center gap-1.5 shadow-sm touch-btn"
                   title="내 닉네임 설정"
                 >
-                  <span>👤</span>
                   {clientCode && (
                     <span className="px-1.5 py-0.5 bg-amber-700 text-white rounded-md text-[10px] font-black tracking-wider">
                       {clientCode}
                     </span>
                   )}
                   <span>{nickname ? `${nickname}님` : '내 정보 등록'}</span>
-                  <span className="text-[10px] text-amber-700">✏️</span>
                 </button>
               </div>
             </div>
@@ -656,27 +634,27 @@
             <nav className="flex gap-2 mt-5">
               <button
                 onClick={() => setTab('wizard')}
-                className={`flex-1 py-3 text-base sm:text-lg font-bold rounded-2xl touch-btn shadow-sm flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-3 text-base sm:text-lg font-bold rounded-2xl touch-btn shadow-sm flex items-center justify-center ${
                   tab === 'wizard' ? 'bg-amber-600 text-white shadow-md' : 'bg-white/80 text-amber-900 hover:bg-white'
                 }`}
               >
-                <span>✏️</span> 기록하기
+                기록하기
               </button>
               <button
                 onClick={() => setTab('network')}
-                className={`flex-1 py-3 text-base sm:text-lg font-bold rounded-2xl touch-btn shadow-sm flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-3 text-base sm:text-lg font-bold rounded-2xl touch-btn shadow-sm flex items-center justify-center ${
                   tab === 'network' ? 'bg-amber-600 text-white shadow-md' : 'bg-white/80 text-amber-900 hover:bg-white'
                 }`}
               >
-                <span>🕸️</span> 행동 지도
+                순서대로 보기
               </button>
               <button
                 onClick={() => setTab('aiReport')}
-                className={`flex-1 py-3 text-base sm:text-lg font-bold rounded-2xl touch-btn shadow-sm flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-3 text-base sm:text-lg font-bold rounded-2xl touch-btn shadow-sm flex items-center justify-center ${
                   tab === 'aiReport' ? 'bg-amber-600 text-white shadow-md' : 'bg-white/80 text-amber-900 hover:bg-white'
                 }`}
               >
-                <span>💌</span> 마음 분석 편지
+                마음 분석 편지
               </button>
             </nav>
           </header>
@@ -688,7 +666,7 @@
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-extrabold text-amber-800 bg-amber-100 px-3.5 py-1.5 rounded-full">
-                      {currentStep}단계 / 총 8단계 {currentStep === 8 && "🌟 (회복과 긍정 대처)"}
+                      {currentStep}단계 / 총 8단계 {currentStep === 8 && "(회복과 긍정 대처)"}
                     </span>
                     <span className="text-sm text-slate-500 font-medium">나에게 가장 가까운 느낌을 편안하게 골라보세요</span>
                   </div>
@@ -705,8 +683,7 @@
                       ? 'bg-emerald-50/80 border-emerald-300' 
                       : 'bg-amber-50/70 border-amber-200'
                   }`}>
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="text-4xl">{STEP_INFO[currentStep - 1].icon}</span>
+                    <div className="mb-2">
                       <h2 className={`text-2xl font-extrabold ${currentStep === 8 ? 'text-emerald-950' : 'text-slate-900'}`}>
                         {STEP_INFO[currentStep - 1].title}
                       </h2>
@@ -721,7 +698,6 @@
                     <div className="mb-5 p-4 rounded-2xl bg-amber-100/70 border-2 border-amber-300 shadow-sm animate-fadeIn">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-1.5 font-extrabold text-amber-950 text-base">
-                          <span className="text-xl">⭐</span>
                           <span>{nickname ? `${nickname}님이 이전에 직접 적으셨던 답변` : '이전에 직접 적으셨던 맞춤 답변'}</span>
                         </div>
                         <span className="text-xs font-bold text-amber-800 bg-amber-200/90 px-2.5 py-1 rounded-full">
@@ -744,22 +720,21 @@
                               }`}
                             >
                               <div className="flex items-center gap-2.5 pr-2 overflow-hidden">
-                                <span className="text-xl shrink-0">✍️</span>
                                 <span className="break-words leading-snug">{opt}</span>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
-                                {isSelected && <span className="text-2xl">✔️</span>}
+                                {isSelected && <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded">선택됨</span>}
                                 <button
                                   type="button"
                                   onClick={(e) => removeCustomPreset(currentStep, opt, e)}
                                   title="이 맞춤 답변 삭제"
-                                  className={`p-1.5 rounded-lg text-sm touch-btn transition-colors ${
+                                  className={`p-1 px-2 rounded-lg text-xs font-bold touch-btn transition-colors ${
                                     isSelected 
                                       ? 'text-amber-200 hover:text-white hover:bg-amber-700/60' 
                                       : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
                                   }`}
                                 >
-                                  🗑️
+                                  삭제
                                 </button>
                               </div>
                             </div>
@@ -786,7 +761,7 @@
                           }`}
                         >
                           <span>{opt}</span>
-                          {isSelected && <span className="text-2xl">✔️</span>}
+                          {isSelected && <span className="text-xs font-bold bg-white/20 px-2 py-1 rounded">선택됨</span>}
                         </button>
                       );
                     })}
@@ -794,7 +769,7 @@
 
                   <div className="mb-4">
                     <label className="block text-sm font-bold text-slate-600 mb-1.5">
-                      ✍️ 찾으시는 내용이 없나요? 편하게 적어주시면 다음에도 기억해 둘게요:
+                      찾으시는 내용이 없나요? 편하게 적어주시면 다음에도 기억해 둘게요:
                     </label>
                     <input
                       type="text"
@@ -812,7 +787,7 @@
                       onClick={() => setCurrentStep(prev => prev - 1)}
                       className="flex-1 py-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-lg rounded-2xl touch-btn"
                     >
-                      ⬅️ 이전으로
+                      이전으로
                     </button>
                   )}
                   <button
@@ -823,7 +798,7 @@
                         : 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/30'
                     }`}
                   >
-                    {currentStep === 8 ? "✨ 다 적었어요 (저장하기)" : "다음으로 ➡️"}
+                    {currentStep === 8 ? "다 적었어요 (저장하기)" : "다음으로"}
                   </button>
                 </div>
               </div>
@@ -843,18 +818,16 @@
             <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
               <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border-4 border-amber-400 space-y-4">
                 <div className="text-center space-y-1.5">
-                  <span className="text-4xl inline-block">🌻</span>
                   <h3 className="text-2xl font-black text-amber-950">마음 돋보기에 오신 것을 환영합니다</h3>
                   <p className="text-xs sm:text-sm font-medium text-slate-600 leading-relaxed">
                     선생님을 어떻게 불러드리면 좋을까요?<br/>
-                    한번 저장해 두시면 다음 접속부터는 다시 묻지 않습니다 😊
+                    한번 저장해 두시면 다음 접속부터는 다시 묻지 않습니다.
                   </p>
                 </div>
 
                 {/* 상담사 초대 링크에서 각인된 고유 번호가 있을 때 안내 뱃지 */}
                 {clientCode ? (
                   <div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-3 flex items-center gap-2.5">
-                    <span className="text-2xl">🎫</span>
                     <div className="text-xs">
                       <div className="font-extrabold text-emerald-900">
                         상담사 지정 식별 번호: <span className="font-mono text-sm px-2 py-0.5 bg-emerald-200 text-emerald-950 rounded-md font-black">[{clientCode}]</span>
@@ -883,11 +856,11 @@
                   <div>
                     <span className="text-xs font-bold text-slate-400 block mb-1">추천 별명 (눌러서 선택):</span>
                     <div className="flex flex-wrap gap-1.5">
-                      {["행복한 해바라기 🌻", "맑은 하늘 ☀️", "푸른 소나무 🌲", "은빛나래 🕊️", "따뜻한 차 한 잔 🍵"].map((tag, idx) => (
+                      {["행복한 해바라기", "맑은 하늘", "푸른 소나무", "은빛나래", "따뜻한 차 한 잔"].map((tag, idx) => (
                         <button
                           key={idx}
                           type="button"
-                          onClick={() => setInputNick(tag.split(' ')[0])}
+                          onClick={() => setInputNick(tag)}
                           className="text-xs px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-xl border border-amber-200 font-bold touch-btn"
                         >
                           {tag}
@@ -912,7 +885,7 @@
                     onClick={() => handleSaveNickname(inputNick)}
                     className="flex-[2] py-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-2xl shadow-md text-base touch-btn"
                   >
-                    마음 돋보기 시작하기 🚀
+                    마음 돋보기 시작하기
                   </button>
                 </div>
               </div>
@@ -925,7 +898,6 @@
               <div className="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl border-4 border-indigo-400 space-y-4">
                 <div className="flex items-center justify-between border-b pb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl">☁️</span>
                     <div>
                       <h3 className="text-lg font-black text-slate-900">클라우드 영구 DB 동기화 설정</h3>
                       <p className="text-xs text-slate-500">스마트폰이나 다른 기기에서도 내 기록과 연결됩니다</p>
@@ -945,7 +917,6 @@
                     ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
                     : 'bg-amber-50 border-amber-300 text-amber-900'
                 }`}>
-                  <span className="text-xl">{dbStatus.isCloud ? '🟢' : '🟡'}</span>
                   <div>
                     <strong className="block font-bold">{dbStatus.label}</strong>
                     <span className="text-[11px] opacity-80">
@@ -970,7 +941,7 @@
                     className="w-full border-2 border-slate-300 rounded-2xl p-3 text-xs font-mono text-slate-800 focus:outline-none focus:border-indigo-500"
                   />
                   <p className="text-[11px] text-slate-500">
-                    💡 상담자로부터 전달받은 Firebase 설정 JSON을 붙여넣으시면 즉시 연결됩니다.
+                    상담자로부터 전달받은 Firebase 설정 JSON을 붙여넣으시면 즉시 연결됩니다.
                   </p>
                 </div>
 
@@ -1004,296 +975,131 @@
     }
 
     // ==========================================
-    // 네트워크 행동 지도 뷰 (내담자용)
+    // 마음 행동 순서 뷰 (순서대로 보기 - 내담자용)
     // ==========================================
     function NetworkView({ chains, onGoWizard, onGoReport }) {
-      const svgRef = useRef(null);
-      const modalSvgRef = useRef(null);
-      const zoomBehaviorRef = useRef(null);
-
-      const [hubInfo, setHubInfo] = useState({ label: '', count: 0 });
-      const [isFullScreen, setIsFullScreen] = useState(false);
-      const [viewType, setViewType] = useState('graph');
-      const [selectedNode, setSelectedNode] = useState(null);
-
-      const prepareGraphData = () => {
-        const nodeMap = new Map();
-        const edgeMap = new Map();
-
-        chains.forEach(c => {
-          const seq = c.sequence;
-          for (let i = 0; i < seq.length; i++) {
-            const cur = seq[i];
-            const id = cur.label;
-            if (!nodeMap.has(id)) {
-              nodeMap.set(id, { id, label: cur.label, type: cur.type, count: 1 });
-            } else {
-              nodeMap.get(id).count += 1;
-            }
-
-            if (i < seq.length - 1) {
-              const next = seq[i + 1];
-              const edgeKey = `${id}->${next.label}`;
-              if (!edgeMap.has(edgeKey)) {
-                edgeMap.set(edgeKey, { source: id, target: next.label, weight: 1 });
-              } else {
-                edgeMap.get(edgeKey).weight += 1;
-              }
-            }
-          }
-        });
-
-        return { nodes: Array.from(nodeMap.values()), edges: Array.from(edgeMap.values()) };
-      };
-
-      const renderD3 = (targetSvg, isModal = false) => {
-        if (!targetSvg) return;
-        const { nodes, edges } = prepareGraphData();
-        const sorted = [...nodes].filter(n => n.type !== '긍정대처').sort((a, b) => b.count - a.count);
-        if (sorted.length > 0) setHubInfo({ label: sorted[0].label, count: sorted[0].count });
-
-        const rect = targetSvg.getBoundingClientRect();
-        const width = (rect && rect.width > 50) ? rect.width : (targetSvg.clientWidth || (isModal ? 800 : 500));
-        const height = (rect && rect.height > 50) ? rect.height : (isModal ? 540 : 360);
-
-        d3.select(targetSvg).selectAll("*").remove();
-        const svg = d3.select(targetSvg).attr("viewBox", [0, 0, width, height]);
-        const g = svg.append("g");
-
-        const zoom = d3.zoom().scaleExtent([0.4, 3.5]).on("zoom", (e) => g.attr("transform", e.transform));
-        svg.call(zoom);
-        zoomBehaviorRef.current = { zoom, svg };
-
-        svg.append("defs").append("marker")
-          .attr("id", isModal ? "arrow-m" : "arrow")
-          .attr("viewBox", "0 -5 10 10").attr("refX", isModal ? 36 : 30).attr("refY", 0)
-          .attr("markerWidth", isModal ? 9 : 8).attr("markerHeight", isModal ? 9 : 8).attr("orient", "auto")
-          .append("path").attr("d", "M0,-5L10,0L0,5").attr("fill", "#F59E0B");
-
-        svg.append("defs").append("marker")
-          .attr("id", isModal ? "arrow-green-m" : "arrow-green")
-          .attr("viewBox", "0 -5 10 10").attr("refX", isModal ? 36 : 30).attr("refY", 0)
-          .attr("markerWidth", isModal ? 9 : 8).attr("markerHeight", isModal ? 9 : 8).attr("orient", "auto")
-          .append("path").attr("d", "M0,-5L10,0L0,5").attr("fill", "#10B981");
-
-        const simulation = d3.forceSimulation(nodes)
-          .force("link", d3.forceLink(edges).id(d => d.id).distance(isModal ? 160 : 120))
-          .force("charge", d3.forceManyBody().strength(isModal ? -550 : -380))
-          .force("center", d3.forceCenter(width / 2, height / 2))
-          .force("collision", d3.forceCollide().radius(isModal ? 70 : 52));
-
-        const link = g.append("g").selectAll("line").data(edges).join("line")
-          .attr("stroke", d => {
-            const targetId = typeof d.target === 'object' ? d.target.id : d.target;
-            const targetNode = nodes.find(n => n.id === targetId);
-            return (targetNode && targetNode.type === '긍정대처') ? "#10B981" : "#FBBF24";
-          })
-          .attr("stroke-width", d => (isModal ? 4 : 3) + d.weight * 2.5)
-          .attr("stroke-opacity", 0.9)
-          .attr("stroke-dasharray", d => {
-            const targetId = typeof d.target === 'object' ? d.target.id : d.target;
-            const targetNode = nodes.find(n => n.id === targetId);
-            return (targetNode && targetNode.type === '긍정대처') ? "6,3" : "none";
-          })
-          .attr("marker-end", d => {
-            const targetId = typeof d.target === 'object' ? d.target.id : d.target;
-            const targetNode = nodes.find(n => n.id === targetId);
-            if (targetNode && targetNode.type === '긍정대처') {
-              return `url(#${isModal ? 'arrow-green-m' : 'arrow-green'})`;
-            }
-            return `url(#${isModal ? 'arrow-m' : 'arrow'})`;
-          });
-
-        const node = g.append("g").selectAll("g").data(nodes).join("g").style("cursor", "pointer")
-          .on("click", (e, d) => setSelectedNode(d))
-          .call(d3.drag()
-            .on("start", (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
-            .on("drag", (e, d) => { d.fx = e.x; d.fy = e.y; })
-            .on("end", (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }));
-
-        const baseRadius = isModal ? 36 : 26;
-        node.append("circle")
-          .attr("r", d => baseRadius + d.count * (isModal ? 8 : 6))
-          .attr("fill", d => {
-            if (d.type === '긍정대처') return '#10B981';
-            return d.count > 1 ? "#F59E0B" : "#FEF3C7";
-          })
-          .attr("stroke", d => d.type === '긍정대처' ? '#047857' : '#D97706')
-          .attr("stroke-width", isModal ? 4 : 3.5)
-          .attr("filter", "drop-shadow(0px 3px 6px rgba(0,0,0,0.15))");
-
-        node.append("text")
-          .text(d => d.label.length > (isModal ? 10 : 7) ? d.label.slice(0, isModal ? 9 : 6) + '..' : d.label)
-          .attr("text-anchor", "middle").attr("dy", isModal ? 6 : 5)
-          .attr("font-size", isModal ? "16px" : "13px").attr("font-weight", "bold")
-          .attr("fill", d => {
-            if (d.type === '긍정대처') return '#FFFFFF';
-            return d.count > 1 ? "#FFFFFF" : "#92400E";
-          });
-
-        simulation.on("tick", () => {
-          link.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
-          node.attr("transform", d => `translate(${d.x},${d.y})`);
-        });
-      };
-
-      useEffect(() => {
-        if (viewType === 'graph' && svgRef.current) {
-          renderD3(svgRef.current, false);
-        }
-      }, [chains, viewType]);
-
-      useEffect(() => {
-        if (isFullScreen && viewType === 'graph') {
-          const timer = setTimeout(() => {
-            if (modalSvgRef.current) {
-              renderD3(modalSvgRef.current, true);
-            }
-          }, 80);
-          return () => clearTimeout(timer);
-        }
-      }, [isFullScreen, chains, viewType]);
+      const [selectedChainIdx, setSelectedChainIdx] = useState(0);
 
       if (!chains || chains.length === 0) {
         return (
           <div className="bg-white p-8 sm:p-12 rounded-3xl border-2 border-amber-300 shadow-sm text-center space-y-4 animate-fadeIn my-auto">
-            <div className="text-5xl">🌱</div>
             <h3 className="text-xl font-black text-amber-950">아직 기록된 마음 여정이 없습니다</h3>
             <p className="text-sm text-slate-600 leading-relaxed max-w-sm mx-auto">
               선생님의 마음 상태와 긍정 대처를 첫 번째로 기록해 보세요.<br/>
-              기록이 쌓이면 나만의 마음 행동 지도와 맞춤 편지가 펼쳐집니다 😊
+              기록이 쌓이면 나만의 마음 행동 순서와 맞춤 편지가 펼쳐집니다.
             </p>
             <div className="pt-2">
               <button
                 onClick={onGoWizard}
-                className="px-6 py-3.5 bg-amber-600 hover:bg-amber-700 text-white font-black text-base rounded-2xl shadow-lg shadow-amber-600/30 touch-btn inline-flex items-center gap-2"
+                className="px-6 py-3.5 bg-amber-600 hover:bg-amber-700 text-white font-black text-base rounded-2xl shadow-lg shadow-amber-600/30 touch-btn inline-flex items-center justify-center"
               >
-                <span>✏️</span>
-                <span>첫 마음 기록 시작하기</span>
+                첫 마음 기록 시작하기
               </button>
             </div>
           </div>
         );
       }
 
+      const curChain = (chains && chains[selectedChainIdx]) || (chains && chains[0]) || { sequence: [] };
+
       return (
         <div className="flex flex-col h-full justify-between">
           <div>
+            {/* 상단 헤더 요약 */}
             <div className="bg-amber-100/80 p-5 rounded-3xl border border-amber-200 mb-4 flex items-center justify-between">
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-3xl">💡</span>
-                  <h3 className="text-xl font-bold text-amber-950">내 마음 행동 지도</h3>
+                <div className="mb-1">
+                  <h3 className="text-xl font-bold text-amber-950">내 마음 행동 순서</h3>
                 </div>
                 <p className="text-sm sm:text-base text-amber-900">
-                  총 <strong className="text-amber-800 font-extrabold">{chains.length}번</strong>의 스트레스 & 회복 순간을 분석한 그림입니다.
+                  총 <strong className="text-amber-800 font-extrabold">{chains.length}번</strong>의 스트레스 & 회복 순간이 순서대로 정리되어 있습니다.
                 </p>
               </div>
-
-              <div className="flex bg-white p-1 rounded-2xl border border-amber-300">
-                <button
-                  onClick={() => setViewType('graph')}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-xl ${
-                    viewType === 'graph' ? 'bg-amber-500 text-white' : 'text-slate-600'
-                  }`}
-                >
-                  🕸️ 그물망
-                </button>
-                <button
-                  onClick={() => setViewType('timeline')}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-xl ${
-                    viewType === 'timeline' ? 'bg-amber-500 text-white' : 'text-slate-600'
-                  }`}
-                >
-                  🛤️ 순서대로
-                </button>
-              </div>
+              <button
+                onClick={onGoReport}
+                className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-sm touch-btn flex items-center justify-center shrink-0"
+                title="마음 분석 편지 바로가기"
+              >
+                편지 보기
+              </button>
             </div>
 
-            {/* 범례 안내바 */}
-            <div className="flex items-center justify-center gap-4 bg-amber-50/80 py-2 px-3 rounded-2xl border border-amber-200/80 mb-3 text-xs font-bold">
-              <span className="flex items-center gap-1.5 text-amber-800">
-                <span className="w-3.5 h-3.5 rounded-full bg-amber-500 border border-amber-600 inline-block"></span>
-                반복된 단골 행동
-              </span>
-              <span className="flex items-center gap-1.5 text-slate-600">
-                <span className="w-3.5 h-3.5 rounded-full bg-amber-100 border border-amber-300 inline-block"></span>
-                일상 반응
-              </span>
-              <span className="flex items-center gap-1.5 text-emerald-700">
-                <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 border border-emerald-600 inline-block"></span>
-                🌱 긍정적 대처 (회복로)
-              </span>
-            </div>
-
-            {hubInfo.label && (
-              <div className="bg-white p-4 sm:p-5 rounded-3xl border-2 border-amber-400 shadow-sm mb-4 flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-extrabold text-amber-800 uppercase tracking-wide block mb-1">
-                    ⭐ 가장 자주 반복된 단골 행동/마음 (병목 노드)
-                  </span>
-                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900">
-                    "{hubInfo.label}"
-                  </div>
+            {/* 기록이 여러 개일 때 회차 선택 버튼 목록 */}
+            {chains.length > 1 && (
+              <div className="mb-4">
+                <span className="text-xs font-extrabold text-amber-900 mb-1.5 block">기록 목록 선택:</span>
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  {chains.map((c, idx) => (
+                    <button
+                      key={c.id || idx}
+                      onClick={() => setSelectedChainIdx(idx)}
+                      className={`px-3 py-1.5 rounded-2xl text-xs font-extrabold shrink-0 touch-btn border transition-all ${
+                        selectedChainIdx === idx
+                          ? 'bg-amber-600 text-white border-amber-700 shadow-md scale-[1.02]'
+                          : 'bg-white text-slate-700 border-amber-200 hover:bg-amber-50'
+                      }`}
+                    >
+                      {idx === 0 ? '최근 기록' : `${chains.length - idx}회차 기록`} ({c.date ? c.date.split(' ')[0] : '기록'})
+                    </button>
+                  ))}
                 </div>
-                <button
-                  onClick={onGoReport}
-                  className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-md touch-btn flex items-center gap-1.5"
-                >
-                  <span>💌</span> 마음 분석 편지 보기
-                </button>
               </div>
             )}
 
-            {viewType === 'graph' ? (
-              <div className="relative bg-amber-50/50 rounded-3xl border-2 border-amber-200 overflow-hidden shadow-inner p-2">
-                <div className="flex justify-between items-center px-2 py-1 mb-1">
-                  <span className="text-xs text-amber-800 font-bold">동그라미를 콕 누르면 자세히 보입니다 👆</span>
-                  <button
-                    onClick={() => setIsFullScreen(true)}
-                    className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow flex items-center gap-1 touch-btn"
-                  >
-                    <span>🔍</span> 화면 가득 크게보기
-                  </button>
-                </div>
-                <svg ref={svgRef} className="w-full h-[350px]"></svg>
-                {selectedNode && (
-                  <div className="mt-2 p-3 bg-white rounded-2xl border-2 border-amber-500 shadow-md flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-bold text-amber-700 block">선택하신 내용 ({selectedNode.type})</span>
-                      <span className="text-lg font-extrabold text-slate-900">{selectedNode.label} ({selectedNode.count}회 등장)</span>
-                    </div>
-                    <button onClick={() => setSelectedNode(null)} className="text-xs text-slate-400 hover:text-slate-600 p-1">닫기 ✕</button>
-                  </div>
-                )}
+            {/* 1단계부터 8단계까지 순서대로 카드 리스트 */}
+            <div className="bg-amber-50/40 rounded-3xl border-2 border-amber-200 p-4 sm:p-5 max-h-[460px] overflow-y-auto space-y-3">
+              <div className="flex items-center justify-between text-xs text-slate-600 font-bold mb-1 pb-2 border-b border-amber-200/80">
+                <span>기록 일시: <strong className="text-amber-950 font-black">{curChain.date || '최근'}</strong></span>
+                <span className="text-amber-800 font-extrabold">1단계부터 8단계 흐름</span>
               </div>
-            ) : (
-              <div className="bg-amber-50/40 rounded-3xl border-2 border-amber-200 p-4 max-h-[440px] overflow-y-auto space-y-4">
-                <div className="text-xs text-slate-500 font-bold mb-2">
-                  최근 기록 일시: <strong className="text-amber-900 font-extrabold">{chains[0]?.date}</strong>
-                </div>
-                {chains[0]?.sequence.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-full text-white font-extrabold text-sm flex items-center justify-center shrink-0 shadow ${
-                      item.type === '긍정대처' ? 'bg-emerald-600' : 'bg-amber-500'
+
+              {curChain.sequence && curChain.sequence.map((item, idx) => {
+                const stepNum = idx + 1;
+                const isRecovery = stepNum === 8 || item.type === '긍정대처';
+
+                return (
+                  <div key={idx} className="flex flex-col items-center">
+                    <div className={`w-full p-4 rounded-2xl border-2 shadow-sm transition-all ${
+                      isRecovery
+                        ? 'bg-emerald-50/95 border-emerald-400 shadow-emerald-100 ring-2 ring-emerald-300/40'
+                        : 'bg-white border-amber-200'
                     }`}>
-                      {idx + 1}
-                    </div>
-                    <div className={`flex-1 bg-white p-3.5 rounded-2xl border shadow-sm flex items-center justify-between ${
-                      item.type === '긍정대처' ? 'border-emerald-300 bg-emerald-50/30' : 'border-amber-200'
-                    }`}>
-                      <div>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-md mr-2 ${
-                          item.type === '긍정대처' ? 'text-emerald-800 bg-emerald-100' : 'text-amber-700 bg-amber-50'
-                        }`}>{item.type}</span>
-                        <span className="text-base font-extrabold text-slate-900">{item.label}</span>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-6 h-6 rounded-full text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm ${
+                            isRecovery ? 'bg-emerald-600' : 'bg-amber-500'
+                          }`}>
+                            {stepNum}
+                          </span>
+                          <span className={`text-xs font-black px-2 py-0.5 rounded-md ${
+                            isRecovery ? 'text-emerald-800 bg-emerald-100' : 'text-amber-800 bg-amber-100'
+                          }`}>
+                            {item.type}
+                          </span>
+                        </div>
+                        {isRecovery && (
+                          <span className="text-xs font-black text-emerald-800 bg-emerald-200/80 px-2.5 py-0.5 rounded-full">
+                            회복의 열쇠
+                          </span>
+                        )}
                       </div>
-                      {idx < chains[0].sequence.length - 1 && <span className="text-amber-400 font-bold text-lg">➔</span>}
+
+                      <div className={`text-base sm:text-lg font-black pl-8 ${
+                        isRecovery ? 'text-emerald-950' : 'text-slate-900'
+                      }`}>
+                        {item.label}
+                      </div>
                     </div>
+
+                    {idx < curChain.sequence.length - 1 && (
+                      <div className="my-1 flex flex-col items-center">
+                        <span className="text-amber-400 text-lg font-black leading-none">↓</span>
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
+                );
+              })}
+            </div>
           </div>
 
           <div className="flex gap-2.5 mt-5">
@@ -1301,50 +1107,15 @@
               onClick={onGoWizard}
               className="flex-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-lg rounded-2xl border border-slate-300 touch-btn"
             >
-              ➕ 기록 추가
+              기록 추가
             </button>
             <button
               onClick={onGoReport}
-              className="flex-[2] py-4 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-lg rounded-2xl shadow-lg shadow-amber-600/30 touch-btn flex items-center justify-center gap-2"
+              className="flex-[2] py-4 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-lg rounded-2xl shadow-lg shadow-amber-600/30 touch-btn flex items-center justify-center"
             >
-              <span>💌</span> 마음 분석 편지 보기
+              마음 분석 편지 보기
             </button>
           </div>
-
-          {/* 풀스크린 모달 */}
-          {isFullScreen && (
-            <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="bg-white w-full max-w-5xl h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border-4 border-amber-400 animate-fadeIn">
-                <div className="bg-amber-100 p-5 flex items-center justify-between border-b border-amber-200">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">🔍</span>
-                    <div>
-                      <h2 className="text-xl sm:text-2xl font-extrabold text-amber-950">시원하게 크게 보는 마음 행동 지도</h2>
-                      <p className="text-xs sm:text-sm text-amber-800">초록색 동그라미는 나를 살리는 '긍정적 대처' 탈출로입니다.</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setIsFullScreen(false)}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-2xl text-base shadow touch-btn"
-                  >
-                    닫기 ✕
-                  </button>
-                </div>
-                <div className="flex-1 relative bg-amber-50/40 p-4 flex flex-col">
-                  <svg ref={modalSvgRef} className="w-full h-full flex-1 rounded-2xl bg-white/60 border border-amber-200"></svg>
-                  {selectedNode && (
-                    <div className="mt-3 p-3.5 bg-white rounded-2xl border-2 border-amber-500 shadow-md flex items-center justify-between">
-                      <div>
-                        <span className="text-xs font-bold text-amber-700 block">선택 항목: [{selectedNode.type}]</span>
-                        <span className="text-lg font-extrabold text-slate-900">{selectedNode.label} (누적 {selectedNode.count}회)</span>
-                      </div>
-                      <button onClick={() => setSelectedNode(null)} className="text-xs text-slate-400 hover:text-slate-600 p-1">선택 해제 ✕</button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       );
     }
@@ -1466,7 +1237,7 @@
         // 다회차 회기 비교 (진화와 성장의 발견)
         let trajectorySection = "";
         if (metrics.hasProgress) {
-          trajectorySection = `\n> 🌿 **${userName}의 발걸음에서 발견한 작은 희망의 빛**\n> 지난 ${totalChains}번의 기록들을 톺아보면, 거센 스트레스 폭풍 속에서도 점차 나를 잃지 않으려는 노력이 선명해지고 있습니다. 특히 최근 기록에서 스스로 선택하신 긍정 대처인 **"${topPositiveCoping}"**은, 어두운 방 안에 조용히 촛불 하나를 켜는 것과 같은 눈부신 용기입니다.\n`;
+          trajectorySection = `\n> **${userName}의 발걸음에서 발견한 작은 희망의 빛**\n> 지난 ${totalChains}번의 기록들을 톺아보면, 거센 스트레스 폭풍 속에서도 점차 나를 잃지 않으려는 노력이 선명해지고 있습니다. 특히 최근 기록에서 스스로 선택하신 긍정 대처인 **"${topPositiveCoping}"**은, 어두운 방 안에 조용히 촛불 하나를 켜는 것과 같은 눈부신 용기입니다.\n`;
         }
 
         return `친애하는 ${userName}께,
@@ -1483,7 +1254,7 @@ ${trajectorySection}
 
 ---
 
-### 🌱 ${userName}을 위한 '오늘의 3단계 마음 돌봄 가이드'
+### ${userName}을 위한 '오늘의 3단계 마음 돌봄 가이드'
 
 1. **[1단계: 알아차림] 몸의 신호에 다정하게 이름 붙이기**
    - 몸에서 **"${topBody}"** 느낌이 쿵 하고 감지될 때, 놀라지 마시고 *"아, 지금 내 몸과 마음이 긴장하고 있구나. 잠깐 쉬어가라는 신호구나"*라고 가만히 읊조려 주세요.
@@ -1496,7 +1267,7 @@ ${trajectorySection}
 
 ${userName}의 마음 정원에 다시 푸른 싹이 돋아나길 온 마음으로 응원합니다.
 
-— ${userName}의 마음 곁에서, **마음 돋보기** 드림 🌻`;
+— ${userName}의 마음 곁에서, **마음 돋보기** 드림`;
       };
 
       // 3. Gemini API 실시간 LLM 편지 생성 (키가 있거나 연결 가능 시)
@@ -1641,10 +1412,9 @@ ${sessionDetails}
       if (!metrics || metrics.totalChains === 0) {
         return (
           <div className="bg-white p-8 sm:p-12 rounded-3xl border-2 border-amber-300 shadow-sm text-center space-y-4 animate-fadeIn my-auto">
-            <div className="text-5xl">💌</div>
             <h3 className="text-xl font-black text-amber-950">아직 작성된 마음 분석 편지가 없습니다</h3>
             <p className="text-sm text-slate-600 leading-relaxed max-w-sm mx-auto">
-              마음 기록을 남겨주시면, {userName}만을 위한 따뜻한 위로와 맞춤 심리 분석 편지가 정성껏 작성됩니다 😊
+              마음 기록을 남겨주시면, {userName}만을 위한 따뜻한 위로와 맞춤 심리 분석 편지가 정성껏 작성됩니다.
             </p>
           </div>
         );
@@ -1655,11 +1425,10 @@ ${sessionDetails}
           {/* 상단 툴바 카드 (내담자 전용 깔끔한 디자인) */}
           <div className="bg-gradient-to-r from-amber-100/90 to-amber-200/70 border border-amber-300 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
             <div className="flex items-center gap-3">
-              <span className="text-4xl">💌</span>
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-black text-amber-900 uppercase tracking-wider">
-                    {generationMode === 'gemini' ? '✨ AI 맞춤 마음 편지' : '🌱 나만의 맞춤 마음 편지'}
+                    {generationMode === 'gemini' ? 'AI 맞춤 마음 편지' : '나만의 맞춤 마음 편지'}
                   </span>
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/90 text-amber-800 font-bold border border-amber-300">
                     총 {metrics.totalChains}회 분석
@@ -1675,19 +1444,17 @@ ${sessionDetails}
               <button
                 onClick={() => apiKey ? generateGeminiLetter() : setAiLetter(buildDynamicLetter())}
                 disabled={isGenerating}
-                className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow touch-btn flex items-center gap-1.5 disabled:opacity-50"
+                className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow touch-btn flex items-center justify-center disabled:opacity-50"
                 title="편지 다시 쓰기"
               >
-                <span>🔄</span>
                 <span>{isGenerating ? '작성 중...' : '편지 다시 쓰기'}</span>
               </button>
 
               <button
                 onClick={handleCopy}
-                className="px-3.5 py-2 bg-white hover:bg-amber-50 text-amber-950 border border-amber-300 text-xs sm:text-sm font-bold rounded-xl shadow-sm touch-btn flex items-center gap-1.5"
+                className="px-3.5 py-2 bg-white hover:bg-amber-50 text-amber-950 border border-amber-300 text-xs sm:text-sm font-bold rounded-xl shadow-sm touch-btn flex items-center justify-center"
                 title="편지 본문 복사하기"
               >
-                <span>{copied ? '✅' : '📋'}</span>
                 <span>{copied ? '복사됨!' : '편지 복사'}</span>
               </button>
             </div>
@@ -1695,19 +1462,13 @@ ${sessionDetails}
 
           {/* 본문 감성 편지지 카드 */}
           <div className="bg-[#FFFDF9] p-6 sm:p-8 rounded-3xl border-2 border-amber-200/80 shadow-md relative overflow-hidden">
-            {/* 배경 워터마크 장식 */}
-            <div className="absolute right-[-10px] top-[-10px] text-8xl opacity-10 pointer-events-none select-none">
-              🌻
-            </div>
-
             {isGenerating ? (
               <div className="py-20 text-center space-y-4">
-                <div className="text-5xl animate-bounce">✍️</div>
                 <h4 className="text-xl font-black text-amber-950">
                   {userName}을 위한 따뜻한 편지를 정성껏 적고 있습니다...
                 </h4>
                 <p className="text-sm text-slate-500 font-medium">
-                  {userName}이 남겨주신 소중한 기록들을 가만히 되짚어보는 중입니다 😊
+                  {userName}이 남겨주신 소중한 기록들을 가만히 되짚어보는 중입니다.
                 </p>
               </div>
             ) : (
